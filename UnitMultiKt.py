@@ -2,18 +2,22 @@ import torch
 import numpy as np
 from phantominator import shepp_logan
 import matplotlib.pyplot as plt
-from einops import rearrange
+from einops import rearrange, repeat
 
 def MultiplicationKT(mat,Shift, N):
 
     shifts = ((Shift*torch.arange(N))%N)
+
+    _, _, _, n_cols = mat.shape
     
-    _, _, n_rows, n_cols = mat.shape
-    arange1 = (shifts).view((n_rows, 1)).repeat((1, n_cols))
-    arange2 = torch.transpose(arange1,0,1) 
+    arange1 = repeat(shifts,'h -> h c', c = n_cols)
     
+    # arange2 = rearrange(arange1,'h w -> w h')
+    # not sure which method is more efficient
+
     arange1 = rearrange(arange1, 'h w-> 1 1 h w')
-    arange2 = rearrange(arange2, 'h w -> 1 1 h w')
+    arange2 = rearrange(arange1, '1 1 h w -> 1 1 w h')
+
     out1 = torch.gather(mat, 2, arange1)
 
     return torch.gather(out1, 3, arange2)
