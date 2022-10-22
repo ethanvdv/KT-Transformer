@@ -1,30 +1,8 @@
 import torch
 import numpy as np
+from phantominator import shepp_logan
 import matplotlib.pyplot as plt
 from einops import rearrange, repeat
-from CreatePhantom import *
-
-'''
-The Multiplication Kaleidoscope Transform by White, in Tensor Form.
-
-Note: The Transform is the opposite to the traditional transform.
-
-i.e For a 1 smear MKT of the number 176, this requires the factors of 175 and 177.
-
-175 has factors of 3 and 59.
-
-We want to apply the "3" transform, we need to actually shift it by 59.
-
-If we want to apply the "59" transform, we need to actually shift by 3.
-
-It is a "psuedo" inverse because for some values, the error is very high.
-
-This is due to the non-deterministic "scatter" function.
-
-For Prime Grids, the transform ALWAYS has a correct inverse, except when Shift = 0,
-and when Shift = N.
-
-'''
 
 def MultiplicationKT(mat,Shift, N):
 
@@ -63,6 +41,7 @@ def pseudoInvKaleidoscope(source, Shift, N):
     arange1 = rearrange(arange1, 'h w-> 1 1 h w')
     arange2 = rearrange(arange1, '1 1 h w -> 1 1 w h')
     
+    
     x = source.scatter(3,arange2, source)
     
     output  = x.scatter(2,arange1, x)
@@ -70,24 +49,71 @@ def pseudoInvKaleidoscope(source, Shift, N):
     return output
 
 N = 176
+numCh = 1
 
-ph = CreatePhantom(N)
+#From Marlon's Code for loading Shepp_Logan
 
-shift = 16
+# Generate phantom for testing
+ph2 = np.rot90(np.transpose(np.array(shepp_logan(N))), 1)
+# As pytorch tensor
+ph = torch.tensor(ph2.copy(), dtype=torch.float)
+# Create channel dim (with dummy data for the channel dimension)
+ph = torch.unsqueeze(ph, 0)
+ph = torch.cat([ph]*numCh, 0)
+# Create batch dim
+ph = torch.unsqueeze(ph, 0)
 
-output = MultiplicationKT(ph,shift,N)
-input = pseudoInvKaleidoscope(output, shift, N)
+valuesPseudo = []
+
+# for i in range(-N, 0):
+#     output = MultiplicationKT(ph,i,N)
+#     input = pseudoInvKaleidoscope(output, i, N)
+#     #Error of the inverse
+#     hhh = torch.sum(torch.nonzero(ph-input))
+#     valuesPseudo.append(hhh)
+
+
+# for i in range(N):
+#     output = MultiplicationKT(ph,i,N)
+#     input = pseudoInvKaleidoscope(output, i, N)
+#     #Error of the inverse
+    
+#     hhh = torch.sum(torch.nonzero(ph-input))
+#     valuesPseudo.append(hhh)
+
+
+
+for i in [5, 7, 25, 35, -5, -7, -25, -35, 3, 59, -3, -59]:
+    output = MultiplicationKT(ph,i,N)
+    input = pseudoInvKaleidoscope(output, i, N)
+    #Error of the inverse
+    
+    hhh = torch.sum(torch.nonzero(ph-input))
+    valuesPseudo.append(hhh)
+
+
+
+print(len(valuesPseudo))
+
 
 
 plt.figure(1)
-plt.imshow(np.abs(ph[0,0,:, :]))
+plt.plot([5, 7, 25, 35, -5, -7, -25, -35, 3, 59, -3, -59], valuesPseudo,'r*')
+
 
 plt.figure(2)
-plt.imshow(np.abs(output[0,0,:, :]))
+plt.imshow(np.abs(ph[0,0,:, :]))
+
 
 plt.figure(3)
+plt.imshow(np.abs(output[0,0,:, :]))
+
+plt.figure(4)
 plt.imshow(np.abs(input[0,0,:,:]))
 plt.show()
+
+
+
 
 
 

@@ -19,7 +19,7 @@ def multiKT(image, indices):
     return newimage
 
 
-middleshape = True
+middleshape = False
 
 
 if middleshape == True:
@@ -52,7 +52,7 @@ factors of 177 = [3, 59, -3, -59]
 
 factorslist = [5, 7, 25, 35, -5, -7, -25, -35, 3, 59, -3, -59]
 
-
+factorslist = [3]
 plt.figure(1)
 plt.imshow(data)
 
@@ -70,7 +70,7 @@ for a in factorslist:
 
 
 #greyscale
-plt.imsave('mask_R210.png', output, cmap = 'gray')
+plt.imsave('mask_R210.png', step, cmap = 'gray')
 
 output[output > 0] = 255
 

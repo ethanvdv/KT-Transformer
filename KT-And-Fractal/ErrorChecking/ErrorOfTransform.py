@@ -8,6 +8,15 @@ from PIL import Image
 from torchvision.utils import save_image
 import torch
 
+'''
+This takes a while (About 3 hrs) to Run because of nested for loops.
+ 
+Can definitely be improved/optimised
+
+Can safely not plot nu > 88 because the transforms are too lossy
+'''
+
+
 def kal_round(x, sigma):
     '''
     Rounds x up or down depending on whether sigma is positive or negative
@@ -22,8 +31,22 @@ def kaleidoscope(img, nu, sigma):
     Perform a nu,sigma-Kaleidoscope transform on img
     Modified from Jacobs code
     '''
+    
 
-    img = img // np.abs(sigma) # Normalise image
+    # Perform kaleidoscope transform
+    h, w = img.shape
+    
+    #Wraps so a 0 transform is actually a "N" transform
+    #Needed if we divide by zero
+    if nu == 0:
+        nu = h
+        
+    if sigma == 0:
+        sigma = h
+    
+
+
+    # img = img // np.abs(sigma) # Normalise image
 
 
     # Perform kaleidoscope transform
@@ -109,51 +132,66 @@ indexes = np.arange(N*N)
 #Reshape to square
 indexes = np.reshape(indexes, [N,N])
 
-
-
 #Chose nu and sigma
-#downscaling
-nu = 16
 
-#Smear FactorW
-sigma = 1
+nonLossyTransformsNu = []
+nonLossyTransformsSigma = []
 
-#Returns the indexes of the "rows" and the indexes of the "cols"
-changes = kaleidoscope(indexes, nu, sigma)
+nonLossyTransformsNu1000 = []
+nonLossyTransformsSigma1000 = []
 
-# Save the transform to image
-# plt.imsave(f'{nu}-{sigma}.png',np.abs(changes[0,0,:,:, :].numpy().astype(np.uint8)))
 
-output = tensorKaleidoscope(ph, changes)
 
-input = pseudoInvKaleidoscope(output, changes)
+i = 0
+for nu in range(N):
+    for sigma in range(N):                   
+        
+        #Returns the indexes of the "rows" and the indexes of the "cols"
+        changes = kaleidoscope(indexes, nu, sigma)
 
-#Error of the inverse
-print(torch.sum(torch.nonzero(ph-input)))
+        output = tensorKaleidoscope(ph, changes)
+
+        input = pseudoInvKaleidoscope(output, changes)
+
+        hhh = torch.sum(torch.nonzero(ph-input))
+        #Error of the inverse
+        if hhh == 0:
+            print(f"{i} - yes - {nu} - {sigma}")
+            nonLossyTransformsNu.append(nu)
+            nonLossyTransformsSigma.append(sigma)
+            
+        elif hhh < 100000:
+            print(f"{i} - maybe - {nu} - {sigma}")
+            nonLossyTransformsNu1000.append(nu)
+            nonLossyTransformsSigma1000.append(sigma)
+            
+        else:
+            print(i)
+        
+        i+=1
+            
+                
+
+print(f'Number of "0" transforms {len(nonLossyTransformsNu)}')
+
+print(f'Number of "Psuedo" transforms {len(nonLossyTransformsNu1000)}')
+
+print(i)
+
 
 plt.figure(1)
-plt.imshow(np.abs(output[0,0,:, :]))
+plt.plot(nonLossyTransformsNu,nonLossyTransformsSigma)
+plt.xlabel('nu')
+plt.ylabel('sigma')
+plt.title("Transforms which have full inverses - Nu vs Sigma")
 
 
 plt.figure(2)
-plt.imshow(np.abs(changes[0,0,:,:, :]))
+plt.plot(nonLossyTransformsNu1000,nonLossyTransformsSigma1000)
+plt.xlabel('nu')
+plt.ylabel('sigma')
+plt.title("Transforms which have full inverses - Nu vs Sigma")
 
-plt.figure(3)
-plt.imshow(np.abs(input[0,0,:,:]))
+
+
 plt.show()
-
-
-
-"""Possibly used in future code"""
-# invTensor = torch.tensor(np.arange(176).copy(), dtype=torch.int64)
-# InvTensor3 = repeat(invTensor,'h -> h c', c = N)
-# print(InvTensor3)
-# print(InvTensor3.shape)
-# InvTensor1 = rearrange(InvTensor3, 'h w -> 1 1 h w 1')
-# # print(InvTensor1.shape)
-# InvTensor2 = rearrange(InvTensor3, 'h w -> 1 1 w h 1')
-
-# changes2 = torch.cat((InvTensor1, InvTensor2), 4)
-
-
-

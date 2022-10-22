@@ -14,12 +14,18 @@ def kal_round(x, sigma):
     else:
         return int(np.ceil(x))
 
-def kaleidoscope(img, nu, sigma):
+def kaleidoscope(img, nu, sigma, N):
     '''
     Perform a nu,sigma-Kaleidoscope transform on img
     Modified from Jacobs code
     '''
-
+    if nu == 0:
+        nu = N
+        
+    if sigma == 0:
+        sigma = N
+    
+    
     img = img // np.abs(sigma) # Normalise image
 
 
@@ -51,7 +57,7 @@ def kaleidoscope(img, nu, sigma):
     return len(u1)
 
 
-N = 255
+N = 176
 
 #Lets make the integer mask
 indexes = np.arange(N*N)
@@ -59,7 +65,7 @@ indexes = np.arange(N*N)
 #Reshape to square
 indexes = np.reshape(indexes, [N,N])
 
-value = 255
+value = N
 
 aarray = np.arange(value*value)
 aarrayes = np.reshape(aarray, [value,value])
@@ -69,13 +75,14 @@ aarrayes = np.reshape(aarray, [value,value])
 for nu in np.arange(value):
     for sigma in np.arange(value):
         #Returns the indexes of the "rows"
-        a= kaleidoscope(indexes, nu+1, sigma+1)
+        a= kaleidoscope(indexes, nu, sigma, N)
         print(a)
         aarrayes[nu,sigma] = a
 
 
+
 plt.figure(1)
-plt.imshow(aarrayes, cmap='inferno', vmin=0, vmax=255)
+plt.imshow(aarrayes, cmap='inferno', vmin=0, vmax=N)
 plt.title('Data Lost From Transform')
 plt.xlabel('nu')
 plt.ylabel('sigma')

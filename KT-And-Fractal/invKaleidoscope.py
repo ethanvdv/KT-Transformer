@@ -77,7 +77,7 @@ def tensorKaleidoscope(img, changes):
     
     return output
 
-def pseudoInvKaleidoscope(source, changes2):
+def undotensorKaleidoscope(source, changes2):
     '''
     Scatter is non-deterministic 
     (from documentation)
@@ -121,12 +121,12 @@ sigma = 1
 #Returns the indexes of the "rows" and the indexes of the "cols"
 changes = kaleidoscope(indexes, nu, sigma)
 
-# Save the transform to image
+
 # plt.imsave(f'{nu}-{sigma}.png',np.abs(changes[0,0,:,:, :].numpy().astype(np.uint8)))
 
 output = tensorKaleidoscope(ph, changes)
 
-input = pseudoInvKaleidoscope(output, changes)
+input = undotensorKaleidoscope(output, changes)
 
 #Error of the inverse
 print(torch.sum(torch.nonzero(ph-input)))

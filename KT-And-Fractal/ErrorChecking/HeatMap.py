@@ -1,12 +1,9 @@
-from operator import index
 import numpy as np
 import matplotlib.pyplot as plt
-from phantominator import shepp_logan
 from einops import rearrange, repeat
 import torch
 from PIL import Image
-from torchvision.utils import save_image
-import torch
+from CreatePhantom import *
 
 def kal_round(x, sigma):
     '''
@@ -22,8 +19,22 @@ def kaleidoscope(img, nu, sigma):
     Perform a nu,sigma-Kaleidoscope transform on img
     Modified from Jacobs code
     '''
+    
 
-    img = img // np.abs(sigma) # Normalise image
+    # Perform kaleidoscope transform
+    h, w = img.shape
+    
+    #Wraps so a 0 transform is actually a "N" transform
+    #Needed if we divide by zero
+    if nu == 0:
+        nu = h
+        
+    if sigma == 0:
+        sigma = h
+    
+
+
+    # img = img // np.abs(sigma) # Normalise image
 
 
     # Perform kaleidoscope transform
@@ -92,15 +103,9 @@ def pseudoInvKaleidoscope(source, changes2):
 
 
 N = 176
-numCh = 1
 
-#From Marlon's Code for loading Shepp_Logan
 
-ph = np.rot90(np.transpose(np.array(shepp_logan(N))), 1)
-ph = torch.tensor(ph.copy(), dtype=torch.float)
-ph = torch.unsqueeze(ph, 0)
-ph = torch.cat([ph]*numCh, 0)
-ph = torch.unsqueeze(ph, 0)
+ph = CreatePhantom(N)
 
 
 #Lets make the integer mask
@@ -109,51 +114,44 @@ indexes = np.arange(N*N)
 #Reshape to square
 indexes = np.reshape(indexes, [N,N])
 
-
-
 #Chose nu and sigma
-#downscaling
-nu = 16
 
-#Smear FactorW
-sigma = 1
+nonLossyTransformsNu = []
+nonLossyTransformsSigma = []
 
-#Returns the indexes of the "rows" and the indexes of the "cols"
-changes = kaleidoscope(indexes, nu, sigma)
+nonLossyTransformsNu1000 = []
+nonLossyTransformsSigma1000 = []
 
-# Save the transform to image
-# plt.imsave(f'{nu}-{sigma}.png',np.abs(changes[0,0,:,:, :].numpy().astype(np.uint8)))
+aarray = np.arange(N*N)
+aarrayes = np.reshape(aarray, [N,N])
 
-output = tensorKaleidoscope(ph, changes)
+i = 0
+for nu in range(N):
+    for sigma in range(N):                   
+        
+        #Returns the indexes of the "rows" and the indexes of the "cols"
+        changes = kaleidoscope(indexes, nu, sigma)
 
-input = pseudoInvKaleidoscope(output, changes)
+        output = tensorKaleidoscope(ph, changes)
 
-#Error of the inverse
-print(torch.sum(torch.nonzero(ph-input)))
+        input = pseudoInvKaleidoscope(output, changes)
 
-plt.figure(1)
-plt.imshow(np.abs(output[0,0,:, :]))
+        hhh = torch.sum(torch.nonzero(ph-input))
+
+        aarrayes[nu,sigma] = hhh
+
+        print(i)
+        
+        i+=1
+            
+                
+plt.figure(100)
+plt.imshow(aarrayes, cmap='inferno', vmin=0, vmax=np.max(aarray))
+plt.title('Data Lost From Transform')
+plt.xlabel('nu')
+plt.ylabel('sigma')
+plt.colorbar()
 
 
-plt.figure(2)
-plt.imshow(np.abs(changes[0,0,:,:, :]))
 
-plt.figure(3)
-plt.imshow(np.abs(input[0,0,:,:]))
 plt.show()
-
-
-
-"""Possibly used in future code"""
-# invTensor = torch.tensor(np.arange(176).copy(), dtype=torch.int64)
-# InvTensor3 = repeat(invTensor,'h -> h c', c = N)
-# print(InvTensor3)
-# print(InvTensor3.shape)
-# InvTensor1 = rearrange(InvTensor3, 'h w -> 1 1 h w 1')
-# # print(InvTensor1.shape)
-# InvTensor2 = rearrange(InvTensor3, 'h w -> 1 1 w h 1')
-
-# changes2 = torch.cat((InvTensor1, InvTensor2), 4)
-
-
-
