@@ -73,7 +73,7 @@ N = 176
 
 ph = CreatePhantom(N)
 
-shift = 16
+shift = 7
 
 output = MultiplicationKT(ph,shift,N)
 input = pseudoInvKaleidoscope(output, shift, N)
