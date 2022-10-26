@@ -48,6 +48,8 @@ def createTensor(values1, values2,N):
     return changes
 
 
+
+
 class Kaleidoscope:    
     
     def kaleidoscopeIndexes(N, nu, sigma):
@@ -57,6 +59,10 @@ class Kaleidoscope:
         --- Modified from Jacobs code
         
         '''
+        #could be used to make it "correct"
+        
+        # nu = np.ceil((N - sigma) / nu1)
+        
         rows = np.arange(N)
         cols = np.arange(N)
 
@@ -76,15 +82,30 @@ class Kaleidoscope:
     def MKTkaleidoscopeIndexes(shift, N):
               
         shifts = ((shift*np.arange(N))%N)
+        shifts = torch.tensor(shifts.copy(), dtype=torch.int64)
 
+        # _, _, _, n_cols = mat.shape
+        
+        arange1 = repeat(shifts,'h -> h c', c = N)
+        
+        # arange2 = rearrange(arange1,'h w -> w h')
+        # not sure which method is more efficient
+
+        arange1 = rearrange(arange1, 'h w-> 1 1 h w 1')
+        arange2 = rearrange(arange1, '1 1 h w 1 -> 1 1 w h 1')
+        zerosvector = torch.zeros_like(arange1)
+        
         #Need to pass two elements to be able to use the same function
-        output = createTensor(shifts,shifts,N)
+        # output = createTensor(shifts,shifts,N)
+        
+        output = torch.cat((arange1, arange2), 4)
+        output = torch.cat((output, zerosvector), 4)
         
         return output
         
-    def ApplyTransform(img, changes):
+    def ApplyFullTransform(img, changes):
         '''
-        Used in both the MKT and the Full KT
+        Apply the Full Transform
         '''
         #Apply the change in rows
         rows = torch.gather(img, 2, changes[:,:,:,:,0])
@@ -94,7 +115,7 @@ class Kaleidoscope:
         
         return output
     
-    def pseudoInvKaleidoscope(source, changes2,type=0):
+    def pseudoInvKT(source, changes2):
         '''
         Scatter is non-deterministic 
         (from documentation)
@@ -103,11 +124,6 @@ class Kaleidoscope:
         Can add more noise
         
         '''
-        
-        if type == 1:
-            x = source.scatter(3,changes2[:,:,:,:,0], source)
-    
-            output  = x.scatter(2,changes2[:,:,:,:,1], x)
     
         x = source.scatter(3,changes2[:,:,:,:,1],source)
 
@@ -115,6 +131,25 @@ class Kaleidoscope:
 
         return output
     
+    def ApplyMKTransform(input,changes):
+        
+        out1 = torch.gather(input, 2, changes[:,:,:,:,0])
+
+        return torch.gather(out1, 3, changes[:,:,:,:,1])
+    
+    
+    def pseudoInvMKTransform(source, changes):
+        '''
+        Scatter is non-deterministic 
+        (from documentation)
+        It is "close" but not guranteed to be correct, if anything it adds more noise to it
+        '''
+        
+        x = source.scatter(3,changes[:,:,:,:,1], source)
+        
+        output  = x.scatter(2,changes[:,:,:,:,0], x)
+        
+        return output
     
     
     
