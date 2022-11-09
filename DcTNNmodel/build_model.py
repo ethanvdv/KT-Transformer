@@ -1,6 +1,7 @@
 import numpy as np
 import time
 from DcTNN.tnn import * 
+from DcTNN.KalEncoder import * 
 from dc.dc import *
 from phantominator import shepp_logan
 from PIL import Image, ImageOps
@@ -66,6 +67,24 @@ kdArgs3 = {"patch_size": patchSize3, "kaleidoscope": True, "layerNo": layerNo, "
 encList = [patchVIT, patchVIT, patchVIT]
 encArgs = [kdArgs,kdArgs2, kdArgs3]
 '''
+
+sigma = 1
+5, 7
+# Define the dictionaries of parameter values
+kdArgs = {"nu": 25, "sigma": sigma, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+
+kd2Args = {"nu": 35, "sigma": sigma, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+
+# kd3Args = {"nu": 59, "sigma": sigma, "layerNo": layerNo, "numCh": numCh, "nhead": 59, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+
+kd3Args = {"nu": 5, "sigma": sigma, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+
+kd4Args = {"nu": 7, "sigma": sigma, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+
+# Define the array of encoders
+encList = [patch2VIT, patch2VIT, patch2VIT,patch2VIT]
+# Define the array of dictionaries
+encArgs = [kdArgs, kd2Args, kd3Args, kd4Args]
 
 
 # Define the model

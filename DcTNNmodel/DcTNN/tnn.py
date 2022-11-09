@@ -9,6 +9,8 @@ import torch
 from dc.dc import *
 from einops.layers.torch import Rearrange
 from torch import nn
+import matplotlib.pyplot as plt
+import numpy as np
 
 # Helpers
 def pair(t):
@@ -260,25 +262,33 @@ class imageEncoder(nn.Module):
     def forward(self, img, src_mask=None):
 
         x = img
-
+        print("grrr")
+        print(x.shape)
         # If kaleidoscope has been defined
         if self.kaleidoscope:
             x = self.to_kaleidoscope_embedding(x)
-        
+        print(x.shape)
         # Get the patch representation
         x = self.to_patch_embedding(x)
-        
+        print(x.shape)
         # Get the positional embedding
         x = x + self.pos_embedding
-
+        print(x.shape)
         # Perform dropout
         x = self.dropout(x)
-
+        print(x.shape)
         # Get the output of the transformer
         x = self.encoder(x, src_mask)
-
+        print(x.shape)
+        
         # Pass-through multi-layer perceptron and un-patch
         x = self.mlp_head(x)
+        print("Hello")
+        print(x.shape)
+        plt.figure(100)
+        plt.imshow(np.abs(x[0,0, :, :]))
+        plt.title("Zero Fill Image")
+        # plt.show()
 
         # Undo the kaleidoscope transform
         if self.kaleidoscope:

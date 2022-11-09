@@ -65,19 +65,18 @@ for nu in [5, 7, 25, 35, 59]:
     if np.mod(N - sigma,nu) == 0:
         case = 1
         shift = (N - sigma)/nu
+        print(nu)
+        print(shift)
 
     else:
         case = 2
         shift = (N + sigma)/nu
-
-
-
+        print(nu)
+        print(shift)
 
     mktindexes = Kaleidoscope.MKTkaleidoscopeIndexes(shift=shift,N=N)
 
     mkoutput = Kaleidoscope.ApplyMKTransform(mkinput, mktindexes)
-
-
 
 
     '''
@@ -94,7 +93,7 @@ for nu in [5, 7, 25, 35, 59]:
         # Case 1: Need to remove a column and row
 
         newtensor = rearrange(mkoutput[0, :, :-1, :-1], 'c (h k1) (w k2) -> (h w) c k1 k2', k1=patch, k2=patch)
-
+        print(newtensor.shape)
         undotensor = rearrange(newtensor, '(h w) c k1 k2-> c (h k1) (w k2)', h= N // patch, k1=patch, k2=patch)
 
         mkoutput[0, :, :-1, :-1] = undotensor
@@ -111,7 +110,7 @@ for nu in [5, 7, 25, 35, 59]:
         
 
         newtensor = rearrange(newtensor, 'c (h k1) (w k2) -> (h w) c k1 k2', k1=patch, k2=patch)
-        
+        print(newtensor.shape)        
 
         undotensor = rearrange(newtensor, '(h w) c k1 k2-> c (h k1) (w k2)', h= (N + 1) // patch, k1=patch, k2=patch)
 
