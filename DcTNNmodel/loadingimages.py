@@ -37,8 +37,8 @@ class GetDatasetFolder(Dataset):
 
         # Load T1 image
         
-        volume_t1, affine_t1 = self._load_nii(path=f'{self.path}MPRAGE/{scan_id}')
-        # random_index = random.randint(85, 123)
+        volume_t1, __ = self._load_nii(path=f'{self.path}MPRAGE/{scan_id}')
+        # 
         volume_t1 = (volume_t1 - np.min(volume_t1)) / (np.max(volume_t1) - np.min(volume_t1))
         # volume_t1 = volume_t1[:][104][:]
         
@@ -47,9 +47,12 @@ class GetDatasetFolder(Dataset):
         # except IndexError: 
         #     print(f"aaaa{random_index}")
 
+        # volume_t1 = torch.from_numpy(volume_t1).unsqueeze(0)
+        volume_t1 = torch.from_numpy(volume_t1)
         
+        idx = torch.randperm(volume_t1.shape[0])
 
-        volume_t1 = torch.from_numpy(volume_t1).unsqueeze(0)
+        volume_t1 = volume_t1[idx]
         
         return volume_t1
 
@@ -87,4 +90,8 @@ class GetDatasetFolder(Dataset):
         # Move primary axis to first dimension
         volume = np.moveaxis(volume, primary_axis, 0)
 
+        
+
+        volume = volume[70:138,:,:]
+        
         return volume, affine

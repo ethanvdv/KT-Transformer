@@ -82,58 +82,58 @@ class patch2VIT(nn.Module):
         return im
 
 
-class cascadeNet(nn.Module):
-    """
-    Defines a TNN that cascades denoising networks and applies data consistency.
-    Args:
-        N (int)                     -       Image Size
-        encList (array)             -       Should contain denoising network
-        encArgs (array)             -       Contains dictionaries with args for encoders in encList
-        dcFunc (function)           -       Contains the data consistency function to be used in recon
-        lamb (bool)                 -       Whether or not to use a leanred data consistency parameter
-    """
-    def __init__(self, N, encList, encArgs, dcFunc=FFT_DC, lamb=True):
-        super(cascadeNet, self).__init__()
-        # Define lambda for data consistency
-        if lamb:
-            self.lamb = nn.Parameter(torch.ones(len(encList)) * 0.5)
-        else:
-            self.lamb = False
-        # Define image size
-        self.N = N
-        # Define the data consistency function
-        self.dcFunc = dcFunc
+# class cascadeNet(nn.Module):
+#     """
+#     Defines a TNN that cascades denoising networks and applies data consistency.
+#     Args:
+#         N (int)                     -       Image Size
+#         encList (array)             -       Should contain denoising network
+#         encArgs (array)             -       Contains dictionaries with args for encoders in encList
+#         dcFunc (function)           -       Contains the data consistency function to be used in recon
+#         lamb (bool)                 -       Whether or not to use a leanred data consistency parameter
+#     """
+#     def __init__(self, N, encList, encArgs, dcFunc=FFT_DC, lamb=True):
+#         super(cascadeNet, self).__init__()
+#         # Define lambda for data consistency
+#         if lamb:
+#             self.lamb = nn.Parameter(torch.ones(len(encList)) * 0.5)
+#         else:
+#             self.lamb = False
+#         # Define image size
+#         self.N = N
+#         # Define the data consistency function
+#         self.dcFunc = dcFunc
 
-        # Cascade the transformers
-        transformers = []
-        for i, enc in enumerate(encList):
-            transformers.append(enc(N, **encArgs[i]))
+#         # Cascade the transformers
+#         transformers = []
+#         for i, enc in enumerate(encList):
+#             transformers.append(enc(N, **encArgs[i]))
 
-        self.transformers = nn.ModuleList(transformers)
+#         self.transformers = nn.ModuleList(transformers)
 
-    """
-    xPrev should be [numBatch, numCh, ydim, xdim]
-    y should be [numBatch, kCh, ydim, xdim]
-    sampleMask should be [ydim, xdim]
-    """
-    def forward(self, xPrev, y, sampleMask):
+#     """
+#     xPrev should be [numBatch, numCh, ydim, xdim]
+#     y should be [numBatch, kCh, ydim, xdim]
+#     sampleMask should be [ydim, xdim]
+#     """
+#     def forward(self, xPrev, y, sampleMask):
 
-        im = xPrev
+#         im = xPrev
 
-        # Go over the number of iterations to perform updating 
-        for i, transformer in enumerate(self.transformers):        
+#         # Go over the number of iterations to perform updating 
+#         for i, transformer in enumerate(self.transformers):        
 
-            # Denoise the image
-            im = transformer(im)
+#             # Denoise the image
+#             im = transformer(im)
 
-            # Update the residual
-            if self.lamb is False:
-                im = self.dcFunc(im, y, sampleMask, None)
-            else:
-                im = self.dcFunc(im, y, sampleMask, self.lamb[i])
+#             # Update the residual
+#             if self.lamb is False:
+#                 im = self.dcFunc(im, y, sampleMask, None)
+#             else:
+#                 im = self.dcFunc(im, y, sampleMask, self.lamb[i])
 
-        # Return the final output
-        return im
+#         # Return the final output
+#         return im
 
 
 class MKTEncoder(nn.Module):
@@ -221,10 +221,11 @@ class MKTEncoder(nn.Module):
         
         if self.case == 2:
             #Build Extra rows    
-            newtensor = torch.zeros(1, 177, 177)
-            newtensor[:,:-1,:-1] = x[0,:,:,:]
-            newtensor[:,:-1,-2:-1] = x[0, 0, :, -2:-1]
-            newtensor[:,-2:-1,:-1] = x[0, 0, -2:-1, :]
+            newtensor = torch.zeros(1, 1, 177, 177)
+            newtensor[:,:,:-1,:-1] = x[:,:,:,:]
+            newtensor[:,:,:-1,-2:-1] = x[0, 0, :, -2:-1]
+            newtensor[:,:,-2:-1,:-1] = x[0, 0, -2:-1, :]
+            # print(newtensor.shape)
 
             x = self.to_patch_embedding(newtensor)
             
@@ -249,13 +250,16 @@ class MKTEncoder(nn.Module):
             newtensor[:,-2:-1,:-1] = undotensor[0, 0, -2:-1, :]
 
             x = newtensor
+            x = rearrange(x,'c h w -> 1 c h w')
             
         if self.case == 2:
             
             undotensor = self.mlp_head(x)
-            x = undotensor[:, :-1, :-1]
+            # print(undotensor.shape)
+            x = undotensor[:,:, :-1, :-1]
+            # print(x.shape)
 
-        x = rearrange(x,'c h w -> 1 c h w')
+        
         x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
         
         # Return the output
