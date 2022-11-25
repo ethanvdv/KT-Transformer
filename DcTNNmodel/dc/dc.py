@@ -9,6 +9,7 @@ from einops import rearrange
 
 def fft_2d(input, norm='ortho', dim=(-2, -1)):
     x = input
+    x.to('cuda')
     x = rearrange(x, 'b c h w -> b h w c').contiguous()
     if x.shape[3] == 1:
         x = torch.cat([x, torch.zeros_like(x)], 3)
@@ -20,6 +21,7 @@ def fft_2d(input, norm='ortho', dim=(-2, -1)):
 
 def ifft_2d(input, norm='ortho', dim=(-2, -1)):
     x = input
+    x.to('cuda')
     x = rearrange(x, 'b c h w -> b h w c').contiguous()
     x = torch.view_as_complex(x)
     x = torch.fft.ifft2(x, dim=dim, norm=norm)
@@ -41,14 +43,13 @@ Inputs:
 Outputs:            z 
 """
 def FFT_DC(x, y, mask, lamb, norm='ortho'):
-
+    
     # Check if complex
     numCh = x.shape[1]
 
     # Get complex y view
     cy = y.permute(0, 2, 3, 1).contiguous()
     cy = torch.view_as_complex(cy)
-
     # By default, torch.view_as_complex uses last index as real,imag
     x = x.permute(0, 2, 3, 1).contiguous()
 
@@ -59,19 +60,24 @@ def FFT_DC(x, y, mask, lamb, norm='ortho'):
         x = torch.cat([x, torch.zeros_like(x)], 3)
 
     # get k-space of the input image
-    z = torch.fft.fft2(torch.view_as_complex(x), norm=norm)
+    z = torch.fft.fft2(torch.view_as_complex(x), norm=norm).to('cuda')
 
+    y.to('cuda')
+    x.to('cuda')
+    mask.to('cuda')
+    cy.to('cuda')
     # Perform data consistency 
     if lamb is None:
         # Replace Fourier measurements
         z = (1 - mask) * z + mask * y
     else:
         # Weighted average of the collected and reconstructed points
-        z = (1 - mask) * z + mask * (z + lamb * cy) / (1 + lamb)
+        z = (((1 - mask).to('cuda')).to('cuda') * z.to('cuda')).to('cuda') + mask.to('cuda') * (z.to('cuda') + lamb.to('cuda') * cy.to('cuda')).to('cuda') / (1 + lamb)
 
+    z.to('cuda')
     # Apply mask and invert (keep channels that we are working with)
-    z = torch.view_as_real(torch.fft.ifft2(z, norm=norm))[:, :, :, 0:numCh]
+    z = torch.view_as_real(torch.fft.ifft2(z, norm=norm))[:, :, :, 0:numCh].to('cuda')
     z = z.permute(0, 3, 1, 2)
 
     # Return masked image
-    return z
+    return z.to('cuda')

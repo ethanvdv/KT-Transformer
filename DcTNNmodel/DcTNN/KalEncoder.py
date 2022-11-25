@@ -17,6 +17,7 @@ def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
 
+
 class patch2VIT(nn.Module):
     """
     Defines a TNN that creates either Kaleidoscope or Patch tokens.
@@ -76,7 +77,7 @@ class patch2VIT(nn.Module):
 
             # Get a new image estimate based on previous estimate of x (xPrev) 
             im_denoise = self.transformers[i](im)
-            im = im + im_denoise
+            im = im_denoise
 
         # Return the final output and the residual 
         return im
@@ -155,7 +156,7 @@ class MKTEncoder(nn.Module):
         patch_dim = nu * nu * numCh
         self.nu = nu
         self.N = image_size
-
+        device = 'cuda'
         if np.mod(image_size - sigma,nu) == 0:
             self.case = 1
             self.shift = (image_size - sigma)/nu
@@ -167,24 +168,18 @@ class MKTEncoder(nn.Module):
         num_patches = int(self.shift * self.shift)
             
         self.mktindexes = Kaleidoscope.MKTkaleidoscopeIndexes(shift=self.shift,N=image_size)
-
+        self.mktindexes.to(device)
         # Define positional embedding
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches, d_model))
 
         if self.case == 1:
             # Embed the image in patches
             self.to_patch_embedding = nn.Sequential(
-                # Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=nu, p2=nu),
-                # Rearrange('c (h k1) (w k2) -> (h w) c k1 k2', k1=self.nu, k2=self.nu),
                 Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=self.nu, p2=self.nu),
                 nn.Linear(patch_dim, d_model),
             )
-            # Define layer normalisation and linear transformation. As well-as de-patching the image.
-            self.mlp_head = nn.Sequential(
-                nn.LayerNorm(d_model),
-                nn.Linear(d_model, patch_dim),
-                Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', c=numCh, h=self.N // self.nu, p1=self.nu, p2=self.nu)
-            )
+            self.from_embedding = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', c=numCh, h=self.N // self.nu, p1=self.nu, p2=self.nu)
+            
             
         if self.case == 2: 
             # Embed the image in patches
@@ -193,13 +188,14 @@ class MKTEncoder(nn.Module):
                 Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=self.nu, p2=self.nu),
                 nn.Linear(patch_dim, d_model),
             )
-            # Define layer normalisation and linear transformation. As well-as de-patching the image.
-            self.mlp_head = nn.Sequential(
-                nn.LayerNorm(d_model),
-                nn.Linear(d_model, patch_dim),
-                # Rearrange('(h w) c k1 k2-> c (h k1) (w k2)', h= (self.N + 1) // self.nu, k1=self.nu, k2=self.nu),
-                Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', c=numCh, h=(self.N + 1) // self.nu, p1=self.nu, p2=self.nu),
-            )
+            self.from_embedding = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', c=numCh, h=(self.N + 1) // self.nu, p1=self.nu, p2=self.nu)
+            
+        # Define layer normalisation and linear transformation. As well-as de-patching the image.
+        self.mlp_head = nn.Sequential(
+            nn.LayerNorm(d_model),
+            nn.Linear(d_model, patch_dim),
+            self.from_embedding 
+        )
                 
 
         # Define dropout layer
@@ -212,22 +208,27 @@ class MKTEncoder(nn.Module):
 
         x = img
 
-        
+        x.to('cuda')
         x = Kaleidoscope.ApplyMKTransform(x, self.mktindexes)
 
         if self.case == 1:
             # Get the patch representation
-            x = self.to_patch_embedding(x[:, :, :-1, :-1])
+            x = self.to_patch_embedding(x[:, :, :-1, :-1].to('cuda'))
         
         if self.case == 2:
-            #Build Extra rows    
-            newtensor = torch.zeros(1, 1, 177, 177)
-            newtensor[:,:,:-1,:-1] = x[:,:,:,:]
-            newtensor[:,:,:-1,-2:-1] = x[0, 0, :, -2:-1]
-            newtensor[:,:,-2:-1,:-1] = x[0, 0, -2:-1, :]
+
+            x = torch.cat((x, x[:,:,-2:-1,:].to('cuda')), 2)
+            # print(x.shape)
+            x = torch.cat((x, x[:,:,:,-2:-1].to('cuda')), 3)     
+            # print(x.shape)
+            # #Build Extra rows    
+            # newtensor = torch.zeros(1, 1, 177, 177)
+            # newtensor[:,:,:-1,:-1] = x[:,:,:,:]
+            # newtensor[:,:,:-1,-2:-1] = x[0, 0, :, -2:-1]
+            # newtensor[:,:,-2:-1,:-1] = x[0, 0, -2:-1, :]
             # print(newtensor.shape)
 
-            x = self.to_patch_embedding(newtensor)
+            x = self.to_patch_embedding(x)
             
 
         # Get the positional embedding
@@ -242,22 +243,20 @@ class MKTEncoder(nn.Module):
         
         if self.case == 1:
             
-            undotensor = self.mlp_head(x)
-            
-            newtensor = torch.zeros(1, 176, 176)
-            newtensor[:,:-1,:-1] = undotensor[0,:,:,:]
-            newtensor[:,:-1,-2:-1] = undotensor[0, 0, :, -2:-1]
-            newtensor[:,-2:-1,:-1] = undotensor[0, 0, -2:-1, :]
+            x = self.mlp_head(x)
+            x = torch.cat((x, x[:,:,-2:-1,:].to('cuda')), 2)
+            x = torch.cat((x, x[:,:,:,-2:-1].to('cuda')), 3)   
+            # newtensor = torch.zeros(1, 176, 176)
+            # newtensor[:,:-1,:-1] = undotensor[0,:,:,:]
+            # newtensor[:,:-1,-2:-1] = undotensor[0, 0, :, -2:-1]
+            # newtensor[:,-2:-1,:-1] = undotensor[0, 0, -2:-1, :]
 
-            x = newtensor
-            x = rearrange(x,'c h w -> 1 c h w')
+            # x = rearrange(x,'c h w -> 1 c h w')
             
         if self.case == 2:
             
-            undotensor = self.mlp_head(x)
-            # print(undotensor.shape)
-            x = undotensor[:,:, :-1, :-1]
-            # print(x.shape)
+            x = self.mlp_head(x)
+            x = x[:,:, :-1, :-1].to('cuda')
 
         
         x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)

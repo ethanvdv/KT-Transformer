@@ -124,17 +124,20 @@ class Kaleidoscope:
         
         '''
     
-        x = source.scatter(3,changes2[:,:,:,:,1],source)
+        x = source.scatter(3,changes2[:,:,:,:,1],source.to('cuda'))
 
-        output  = x.scatter(2,changes2[:,:,:,:,0], x)
+        output  = x.scatter(2,changes2[:,:,:,:,0].to('cuda'), x)
 
         return output
     
     def ApplyMKTransform(input,changes):
-        
-        out1 = torch.gather(input, 2, changes[:,:,:,:,0])
+        input.to('cuda')
+        changes.to('cuda')
 
-        return torch.gather(out1, 3, changes[:,:,:,:,1])
+        input = torch.gather(input.to('cuda'), 2, changes[:,:,:,:,0].to('cuda')).to('cuda')
+        
+        input = torch.gather(input.to('cuda'), 3, changes[:,:,:,:,1].to('cuda')).to('cuda')
+        return input.to('cuda')
     
     
     def pseudoInvMKTransform(source, changes):
@@ -143,12 +146,13 @@ class Kaleidoscope:
         (from documentation)
         It is "close" but not guranteed to be correct, if anything it adds more noise to it
         '''
+        source.to('cuda')
+        changes.to('cuda')
+        x = source.scatter(3,changes[:,:,:,:,1].to('cuda'), source.to('cuda'))
         
-        x = source.scatter(3,changes[:,:,:,:,1], source)
+        output  = x.scatter(2,changes[:,:,:,:,0].to('cuda'), x.to('cuda'))
         
-        output  = x.scatter(2,changes[:,:,:,:,0], x)
-        
-        return output
+        return output.to('cuda')
     
     
     
