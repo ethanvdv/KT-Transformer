@@ -10,13 +10,13 @@ from torch.utils.data import Dataset, DataLoader
 from loadingimages import GetDatasetFolder
 import torch.optim as optim
 from torchmetrics import StructuralSimilarityIndexMeasure
-print("25 59 7 - 250 epochs")
+print("7 59 3 25 - R9 Fractal Mask (full fractal)")
 randomnumber = np.random.randint(1,1000)
 print(f"Random number to deal with namespace stuff: {randomnumber}")
 print(torch.cuda.is_available)
 norm = 'ortho'
 N = 176
-R = 100
+R = 9
 numCh = 1
 lamb = True
 
@@ -32,11 +32,11 @@ torch.cuda.set_device('cuda:0')
 # ph = torch.unsqueeze(ph, 0)
 
 # Load a random sampling mask and inverse fourier shift
-sampling_mask = np.array(ImageOps.grayscale(Image.open("dctnn/masks/mask_R" + str(R) + ".png")))
-sampling_mask = np.fft.ifftshift(sampling_mask) // np.max(np.abs(sampling_mask))
+sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/masks/mask_R" + str(R) + ".png")))
+sampling_mask = np.fft.ifftshift(sampling_mask) / np.max(np.abs(sampling_mask))
 # sampling_mask = sampling_mask // np.max(np.abs(sampling_mask))
 sampling_mask = torch.tensor(sampling_mask.copy(), dtype=torch.float)
-plt.imsave(f'samplingmask{randomnumber}.png',np.abs(sampling_mask))
+plt.imsave(f'/{randomnumber}/samplingmask{randomnumber}.png',np.abs(sampling_mask))
 sampling_mask.to('cuda')
 
 def undersample(ph):
@@ -70,9 +70,9 @@ kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "nu
 axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
 
 kd3Args = {"nu": 25, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 25, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-kd2Args = {"nu": 59, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 59, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": 59}
+kd2Args = {"nu": 59, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 59, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": 59 * 3}
 kd4Args = {"nu": 7, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-
+kd1Args = {"nu": 3, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
 
 
 # # Define the array of encoders
@@ -84,8 +84,8 @@ device = 'cuda'
 # encList = [patch2VIT, patch2VIT, patch2VIT]
 # encArgs = [kd3Args, kd4Args, kd2Args]
 
-encList = [axVIT, patch2VIT, patch2VIT, patch2VIT]
-encArgs = [axArgs, kd3Args, kd2Args, kd4Args]
+encList = [patch2VIT, patch2VIT, patch2VIT, patch2VIT]
+encArgs = [kd4Args, kd2Args, kd1Args, kd3Args]
 
 # Define the model
 dcenc = cascadeNet(N, encList, encArgs, FFT_DC, lamb)
@@ -95,8 +95,9 @@ pytorch_total_params = sum(p.numel() for p in dcenc.parameters() if p.requires_g
 print("Number of trainable params: " + str(pytorch_total_params))
 
 
-lr = 1e-3
-weighting = 10e-7
+lr = 1e-4
+weighting = 10e-5
+print(f'lr {lr} weighting {weighting}')
 dsc_loss = torch.nn.L1Loss().to('cuda')
 
 optimizer = optim.Adam(dcenc.parameters(),lr)
@@ -147,7 +148,8 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         phRecon = dcenc(zf_image, y, sampling_mask)
         phRecon.to('cuda')
-        loss = (dsc_loss(phRecon.to('cuda'), singleimage.to('cuda')) + total_variation_loss(phRecon.to('cuda'),weighting))
+        # loss = (dsc_loss(phRecon.to('cuda'), singleimage.to('cuda')) + total_variation_loss(phRecon.to('cuda'),weighting))
+        loss = dsc_loss(phRecon.to('cuda'), singleimage.to('cuda'))
         running_loss += loss.item()
         if loss.item() < finalrunning_loss:
             finalrunning_loss = loss.item()
@@ -159,7 +161,6 @@ for epoch in range(epochs):
     
     for X in val_dl:
         X = X.to(device)
-        # y_true = y_true.to(device)
         totalitersval +=1
         ph = rearrange(X, 'b c h w -> c 1 b h w').contiguous()
         ph.to('cuda')
@@ -170,50 +171,31 @@ for epoch in range(epochs):
         with torch.no_grad():
             phRecon1 = dcenc(zf_image, y, sampling_mask)
             phRecon1.to('cuda')
-            loss = (dsc_loss(phRecon1.to('cuda'), singleimage1.to('cuda'))+ total_variation_loss(phRecon1,weighting))
+            # loss = (dsc_loss(phRecon1.to('cuda'), singleimage1.to('cuda'))+ total_variation_loss(phRecon1,weighting))
+            loss = dsc_loss(phRecon1.to('cuda'), singleimage1.to('cuda'))
             loss.to('cuda') 
             if loss.item() < running_loss2:
                 running_loss2 = loss.item() 
                 print("_________________")
                 print("New Best Iterate: " + str(running_loss2) )
                 print("_________________")
-                resetimage = 0
             finalrunning_loss2 = loss.item()
     
-    # resetimage +=1
 
     #Print a final reconstruction
     if (np.mod(epoch,10) == 0) or (epoch == (epochs-1)):
-        plt.imsave(f'newensemble-{randomnumber}-{epoch}-recon.png',np.abs(phRecon1[0, 0, :, :].cpu()))
-        plt.imsave(f'newensemble-{randomnumber}-{epoch}-image.png',np.abs(singleimage1[0, 0, :, :].cpu()))
+        plt.imsave(f'/{randomnumber}/newensemble-{randomnumber}-{epoch}-recon.png',np.abs(phRecon1[0, 0, :, :].cpu()))
+        plt.imsave(f'/{randomnumber}/newensemble-{randomnumber}-{epoch}-image.png',np.abs(singleimage1[0, 0, :, :].cpu()))
+        # plt.imsave(f'newensemble-{randomnumber}-{epoch}-zfimage.png',np.abs(zf_image[0, 0, :, :].cpu()))
         ssim = StructuralSimilarityIndexMeasure().to('cuda')
         print(f'SSIM at epoch {epoch}:')
-        # bestimageRecon = rearrange(bestimageRecon[0, 0, :, :], 'h w -> 1 1 h w')
         print(ssim(phRecon1.to('cuda'),singleimage1.to('cuda')))
-        # print(f"Best Val Loss for 10 Iterations: {running_loss2}")
-        # if (epoch == (epochs-1)):
-        #     plt.imsave(f'Final-image-newensemble-{randomnumber}-{epoch}-recon.png',np.abs(phRecon[0, 0, :, :]))
-        #     plt.imsave(f'Final-image-newensemble-{randomnumber}-{epoch}-image.png',np.abs(singleimage[0, 0, :, :]))
-        #     ssim = StructuralSimilarityIndexMeasure()
-        #     print(f'SSIM at epoch {epoch}:')
-        #     bestimageRecon = rearrange(bestimageRecon[0, 0, :, :], 'h w -> 1 1 h w')
-        #     print(ssim(phRecon,singleimage))
-        #     print(f"Best Val Loss for 10 Iterations: {running_loss2}")
-
-
-
-        # running_loss2 = 1
         
     print("___________________________________")
     print(f"Epoch {epoch} Train loss: {running_loss}")
     print(f"Epoch {epoch} Best Train loss: {finalrunning_loss}")
     print(f"Epoch {epoch} Best Val loss: {running_loss2}")
-    # print(f"Epoch {epoch} Final Val loss: {finalrunning_loss2}")
     print("___________________________________")
-
-    # if resetimage == 10:
-    #     print("10 Epochs without improvement, resetting loss...")
-    #     running_loss2 = 1
 
     end = time.time()
     elapsed = end - start
@@ -223,11 +205,13 @@ for epoch in range(epochs):
     print("Total Time (Mins): " + str((1 / 60) * totaltime))
     print(f"Estimated Time Left (Mins): {(1 / 60) * (epochs - epoch +1) * (totaltime / (epoch + 1))}")
 
-    print(f"Total training iterations {totaliterstrain}")
-    print(f"Total validation iterations {totalitersval}")
+
     print("___________________________________")
     print("___________________________________")
     print("___________________________________")
+
+print(f"Total training iterations {totaliterstrain}")
+print(f"Total validation iterations {totalitersval}")
 print("Done")
 
 

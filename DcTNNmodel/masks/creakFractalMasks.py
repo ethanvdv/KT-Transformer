@@ -14,7 +14,7 @@ def multiKT(image, indices):
         for col in cols:
             x = np.mod(indices*row, h)
             y = np.mod(indices*col, w)
-            newimage[x,y] += image[row,col]
+            newimage[x,y] += image[row,col] * indices
             
     return newimage
 
@@ -45,17 +45,22 @@ else:
     # data = ph
 
 R = 9
-sampling_mask = np.array(ImageOps.grayscale(Image.open("mask_R" + str(R) + ".png")))
+sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/masks/mask_R" + str(R) + ".png")))
 # plt.figure(1)
 # plt.imshow(sampling_mask[70:107, 70:107])
 
+print(np.count_nonzero(sampling_mask// np.max(np.abs(sampling_mask)) ))
 
+sampling = sampling_mask// np.max(np.abs(sampling_mask))
+# plt.imsave('AAAA.png', sampling,cmap = 'gray')
 N = 176
 data = np.zeros((N,N))
 h, w =data.shape
 
-data[70:107, 70:107] = sampling_mask[70:107, 70:107]
+data[50:127, 50:127] = sampling_mask[50:127, 50:127]
 
+
+data = data// np.max(np.abs(data)) 
 # data[data > 0] = 255
 
 # plt.figure(2)
@@ -67,7 +72,9 @@ data[70:107, 70:107] = sampling_mask[70:107, 70:107]
 # factors of 177 = [3, 59, -3, -59]
 # '''
 
-factorslist = [5, 7, 25, 35, -5, -7, -25, -35, 3, 59, -3, -59]
+# factorslist = [5, 7, 25, 35, 59, -5, -7, -25, -35, 3,  -3, -59]
+# factorslist = [5, 7, 25, 35, 59, 3]
+factorslist = [7, 25, 59]
 
 # factorslist = [3]
 # plt.figure(1)
@@ -82,19 +89,37 @@ for a in factorslist:
     prev = np.sum(output)
     
     step = multiKT(data, a)
-    output += step//np.max(step)
+    # output += step//np.max(step)
+    
+    output += step
+    # output = output // np.max(np.abs(output)) 
+    
+
+output = (255*(output)/np.max(np.abs(output)))
 
 
+
+# output = output // np.max(np.max(output))
 
 # #greyscale
-plt.imsave('mask_R111.png', output, cmap = 'gray')
-
-# plt.imshow(output)
-
-output[output > 0] = 255
-
+plt.imsave('mask_R121.png', output)
 print(np.count_nonzero(output))
-# #binary image
-plt.imsave('mask_R100.png', output,cmap = 'gray')
+plt.imsave('data.png', data, cmap = 'gray')
+
+# # plt.imshow(output)
+
+# output[output < 128] +=128
+
+
+# # #binary image
+plt.imsave('mask_R120.png', output,cmap = 'gray')
+
+output2 = np.fft.ifftshift(output) / np.max(np.abs(output))
+
+plt.imsave('mak.png', output2)
+
+output3 = np.fft.ifftshift(output2) / np.max(np.abs(output2))
+
+plt.imsave('mak2.png', output3)
 
 plt.show()

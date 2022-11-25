@@ -69,7 +69,7 @@ def FFT_DC(x, y, mask, lamb, norm='ortho'):
     # Perform data consistency 
     if lamb is None:
         # Replace Fourier measurements
-        z = (1 - mask) * z + mask * y
+        z = (1 - mask).to('cuda') * z.to('cuda') + mask.to('cuda') * y.to('cuda')
     else:
         # Weighted average of the collected and reconstructed points
         z = (((1 - mask).to('cuda')).to('cuda') * z.to('cuda')).to('cuda') + mask.to('cuda') * (z.to('cuda') + lamb.to('cuda') * cy.to('cuda')).to('cuda') / (1 + lamb)
