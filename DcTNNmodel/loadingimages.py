@@ -16,7 +16,8 @@ class GetDatasetFolder(Dataset):
     def __init__(self, path, val_offset=150,train=True):
         # Combine pattern with path     
         self.path = path
-        self.base_path = path + 'MPRAGE'
+        # self.base_path = path + 'MPRAGE'
+        self.base_path = path + 'slices_seg_pad'
         
         self.all_samples = os.listdir(self.base_path)
         self.all_samples.sort()
@@ -37,7 +38,7 @@ class GetDatasetFolder(Dataset):
 
         # Load T1 image
         
-        volume_t1, __ = self._load_nii(path=f'{self.path}MPRAGE/{scan_id}')
+        volume_t1, __ = self._load_nii(path=f'{self.path}slices_seg_pad/{scan_id}')
         # 
         volume_t1 = (volume_t1 - np.min(volume_t1)) / (np.max(volume_t1) - np.min(volume_t1))
         # volume_t1 = volume_t1[:][104][:]
@@ -50,9 +51,10 @@ class GetDatasetFolder(Dataset):
         # volume_t1 = torch.from_numpy(volume_t1).unsqueeze(0)
         volume_t1 = torch.from_numpy(volume_t1)
         
-        idx = torch.randperm(volume_t1.shape[0])
+        # idx = torch.randperm(volume_t1.shape[0])
 
-        volume_t1 = volume_t1[idx]
+        # volume_t1 = volume_t1[idx]
+        
         
         return volume_t1
 
@@ -73,7 +75,7 @@ class GetDatasetFolder(Dataset):
         # Load file
         data = nib.load(path, keep_file_open=False)
         volume = data.get_fdata(caching='unchanged')  # [w, h, slices]
-        
+        # print(volume.shape)
         affine = data.affine
 
         # Squeeze optional 4th dimension
@@ -90,8 +92,8 @@ class GetDatasetFolder(Dataset):
         # Move primary axis to first dimension
         volume = np.moveaxis(volume, primary_axis, 0)
 
-        
+        volume = volume[40:256-40,40:256-40]
 
-        volume = volume[70:138,:,:]
+        # volume = volume[70:138,:,:]
         
         return volume, affine
