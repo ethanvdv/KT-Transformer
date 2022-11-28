@@ -11,7 +11,7 @@ from loadingimages import GetDatasetFolder
 import torch.optim as optim
 from torchmetrics import StructuralSimilarityIndexMeasure
 import os
-print("My Encoding - R4 non fractal mask")
+print("Updated Encoding")
 randomnumber = np.random.randint(1,1000)
 print(f"Random number to deal with namespace stuff: {randomnumber}")
 print(torch.cuda.is_available)
@@ -63,15 +63,15 @@ numCh = numCh
 dim_feedforward = None
 
 
-# Define the dictionaries of parameter values
-patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
+# # Define the dictionaries of parameter values
+# patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+# kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+# axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
 
-kd3Args = {"nu": 25, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-kd2Args = {"nu": 59, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 59, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": 59}
-kd1Args = {"nu": 35, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-# kd4Args = {"nu": 7, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kd3Args = {"nu": 5, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kd2Args = {"nu": 3, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kd1Args = {"nu": 7, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kd4Args = {"nu": 25, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
 # kd1Args = {"nu": 3, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
 # kd2Args = {"nu": 5, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
 
@@ -83,8 +83,8 @@ kd1Args = {"nu": 35, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 7,
 
 
 
-encList = [patch2VIT, patch2VIT, patch2VIT]
-encArgs = [kd1Args, kd3Args,kd2Args]
+encList = [patch2VIT, patch2VIT, patch2VIT, patch2VIT]
+encArgs = [kd1Args, kd3Args,kd2Args, kd4Args]
 # # 7 25 5
 
 # Define the model
@@ -137,8 +137,6 @@ for epoch in range(epochs):
     running_loss = 0
     finalrunning_loss = 1
     for batch_idx, ph in enumerate(dl):
-        # print(ph.shape)
-        # print(f'Step {step}')
         ph = rearrange(ph, 'b h w -> b 1 h w').contiguous()
         ph.to(device)
         singleimage = ph[:, :, :, :].to('cuda')
@@ -162,12 +160,9 @@ for epoch in range(epochs):
     
     #Attempt at Testing Dataset
     for batch_idx, X in enumerate(val_dl):
+        X = rearrange(X, 'b h w -> b 1 h w').contiguous()
         X = X.to(device)
-        
-        singleimage1 = rearrange(X, 'b h w -> b 1 h w').contiguous()
-        # ph.to('cuda')
-        # for index in range(ph.size(dim=0)):
-        singleimage1 = ph[:, :, :, :].to('cuda')
+        singleimage1 = X[:, :, :, :].to('cuda')
         singleimage1.to(device)
         y, zf_image = undersample(singleimage1)
         y.to(device), zf_image.to(device) 

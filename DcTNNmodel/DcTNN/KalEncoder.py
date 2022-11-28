@@ -46,7 +46,7 @@ class patch2VIT(nn.Module):
         self.N = N
         
         # Define the patch size
-        self.patch_size = nu
+        # self.patch_size = nu
         self.nu = nu
         self.sigma = sigma
         # Determine d_model size
@@ -153,21 +153,29 @@ class MKTEncoder(nn.Module):
         self.encoder = nn.TransformerEncoder(self.encoderLayer, num_layers, norm=norm)
         # Define size of the transformer 
         self.d_model = d_model
-        patch_dim = nu * nu * numCh
+        
         self.nu = nu
         self.N = image_size
         device = 'cuda'
+        # print(f'{image_size} {sigma} {nu} {np.mod(image_size - sigma,nu)} ')
         if np.mod(image_size - sigma,nu) == 0:
+            # print(f'{image_size} {sigma} {nu} {np.mod(image_size - sigma,nu)} ')
             self.case = 1
-            self.shift = (image_size - sigma)/nu
+            self.shift = int((image_size - sigma)/nu)
 
         else:
+        # if np.mod(image_size - sigma,nu) == 0
             self.case = 2
-            self.shift = (image_size + sigma)/nu
-        
-        num_patches = int(self.shift * self.shift)
+            self.shift = int((image_size + sigma)/nu)
             
-        self.mktindexes = Kaleidoscope.MKTkaleidoscopeIndexes(shift=self.shift,N=image_size)
+        
+        patch_dim = self.shift * self.shift * numCh
+        
+        num_patches = int(self.nu * self.nu)
+        
+        # print(f'{nu} and {self.shift} , {num_patches}, {d_model}')
+            
+        self.mktindexes = Kaleidoscope.MKTkaleidoscopeIndexes(shift=self.nu, N=image_size)
         self.mktindexes.to(device)
         # Define positional embedding
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches, d_model))
@@ -175,20 +183,20 @@ class MKTEncoder(nn.Module):
         if self.case == 1:
             # Embed the image in patches
             self.to_patch_embedding = nn.Sequential(
-                Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=self.nu, p2=self.nu),
+                Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=self.shift, p2=self.shift),
                 nn.Linear(patch_dim, d_model),
             )
-            self.from_embedding = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', c=numCh, h=self.N // self.nu, p1=self.nu, p2=self.nu)
+            self.from_embedding = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', c=numCh, h=(self.N - 1) // self.shift, p1=self.shift, p2=self.shift)
             
             
         if self.case == 2: 
             # Embed the image in patches
             self.to_patch_embedding = nn.Sequential(
                 # Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=nu, p2=nu),
-                Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=self.nu, p2=self.nu),
+                Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=self.shift, p2=self.shift),
                 nn.Linear(patch_dim, d_model),
             )
-            self.from_embedding = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', c=numCh, h=(self.N + 1) // self.nu, p1=self.nu, p2=self.nu)
+            self.from_embedding = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', c=numCh, h=(self.N + 1) // self.shift, p1=self.shift, p2=self.shift)
             
         # Define layer normalisation and linear transformation. As well-as de-patching the image.
         self.mlp_head = nn.Sequential(
@@ -213,6 +221,8 @@ class MKTEncoder(nn.Module):
 
         if self.case == 1:
             # Get the patch representation
+            # print(x.shape)
+            # print(x[:, :, :-1, :-1].shape)
             x = self.to_patch_embedding(x[:, :, :-1, :-1].to('cuda'))
         
         if self.case == 2:
@@ -242,7 +252,6 @@ class MKTEncoder(nn.Module):
         # Pass-through multi-layer perceptron and un-patch
         
         if self.case == 1:
-            
             x = self.mlp_head(x)
             x = torch.cat((x, x[:,:,-2:-1,:].to('cuda')), 2)
             x = torch.cat((x, x[:,:,:,-2:-1].to('cuda')), 3)   
