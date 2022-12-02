@@ -134,27 +134,37 @@ class Kaleidoscope:
         input.to('cuda')
         changes.to('cuda')
 
-        input = torch.gather(input.to('cuda'), 2, changes[:,:,:,:,0].to('cuda')).to('cuda')
+        # input = torch.gather(input.to('cuda'), 2, changes[:,:,:,:,0].to('cuda')).to('cuda')
         
-        input = torch.gather(input.to('cuda'), 3, changes[:,:,:,:,1].to('cuda')).to('cuda')
+        # input = torch.gather(input.to('cuda'), 3, changes[:,:,:,:,1].to('cuda')).to('cuda')
+
+        input= input[:,:,changes[0,0,:,:,0],changes[0,0,:,:,1]]
         return input.to('cuda')
     
     
+    # def pseudoInvMKTransform(source, changes):
+    #     '''
+    #     Scatter is non-deterministic 
+    #     (from documentation)
+    #     It is "close" but not guranteed to be correct, if anything it adds more noise to it
+    #     '''
+    #     source.to('cuda')
+    #     changes.to('cuda')
+    #     x = source.scatter(3,changes[:,:,:,:,1].to('cuda'), source.to('cuda'))
+        
+    #     output  = x.scatter(2,changes[:,:,:,:,0].to('cuda'), x.to('cuda'))
+        
+    #     return output.to('cuda')
+
     def pseudoInvMKTransform(source, changes):
-        '''
-        Scatter is non-deterministic 
-        (from documentation)
-        It is "close" but not guranteed to be correct, if anything it adds more noise to it
-        '''
-        source.to('cuda')
-        changes.to('cuda')
-        x = source.scatter(3,changes[:,:,:,:,1].to('cuda'), source.to('cuda'))
-        
-        output  = x.scatter(2,changes[:,:,:,:,0].to('cuda'), x.to('cuda'))
-        
-        return output.to('cuda')
+        x = torch.zeros_like(source)
+        x[:,:,changes[0,0,:,:,0], changes[0,0,:,:,1]] = source
+        return x
     
-    
+    def newPseudoKT(source,changes):
+        x = torch.zeros_like(source)
+        x[:,:,changes[0,0,:,:,0], changes[0,0,:,:,1]] = source
+        return x
     
     
     

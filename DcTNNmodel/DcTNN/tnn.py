@@ -262,31 +262,31 @@ class imageEncoder(nn.Module):
     def forward(self, img, src_mask=None):
 
         x = img
-
+        # print(x.shape)
         # If kaleidoscope has been defined
         if self.kaleidoscope:
             x = self.to_kaleidoscope_embedding(x)
-
+        # print(x.shape)
         # Get the patch representation
         x = self.to_patch_embedding(x)
-
+        # print(x.shape)
         # Get the positional embedding
         x = x + self.pos_embedding
-
+        # print(x.shape)
         # Perform dropout
         x = self.dropout(x)
-
+        # print(x.shape)
         # Get the output of the transformer
         x = self.encoder(x, src_mask)
-
+        # print(x.shape)
         
         # Pass-through multi-layer perceptron and un-patch
         x = self.mlp_head(x)
-
+        # print(x.shape)
         # Undo the kaleidoscope transform
         if self.kaleidoscope:
             x = self.from_kaleidoscope_embedding(x)        
-
+        # print(x.shape)
         # Return the output
         return x
 

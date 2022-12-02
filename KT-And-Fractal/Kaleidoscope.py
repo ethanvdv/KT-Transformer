@@ -131,26 +131,36 @@ class Kaleidoscope:
 
         return output
     
-    def ApplyMKTransform(input,changes):
+    # def ApplyMKTransform(input,changes):
         
-        out1 = torch.gather(input, 2, changes[:,:,:,:,0])
+    #     out1 = torch.gather(input, 2, changes[:,:,:,:,0])
 
-        return torch.gather(out1, 3, changes[:,:,:,:,1])
+    #     return torch.gather(out1, 3, changes[:,:,:,:,1])
     
+
+    def ApplyMKTransform(input,changes):
+
+        # x = torch.zeros_like(input)
+        input= input[:,:,changes[0,0,:,:,0],changes[0,0,:,:,1]]
+        return input
+    
+    # def pseudoInvMKTransform(source, changes):
+    #     '''
+    #     Scatter is non-deterministic 
+    #     (from documentation)
+    #     It is "close" but not guranteed to be correct, if anything it adds more noise to it
+    #     '''
+        
+    #     x = source.scatter(3,changes[:,:,:,:,1], source)
+        
+    #     output  = x.scatter(2,changes[:,:,:,:,0], x)
+        
+    #     return output
     
     def pseudoInvMKTransform(source, changes):
-        '''
-        Scatter is non-deterministic 
-        (from documentation)
-        It is "close" but not guranteed to be correct, if anything it adds more noise to it
-        '''
-        
-        x = source.scatter(3,changes[:,:,:,:,1], source)
-        
-        output  = x.scatter(2,changes[:,:,:,:,0], x)
-        
-        return output
-    
+        x = torch.zeros_like(source)
+        x[:,:,changes[0,0,:,:,0], changes[0,0,:,:,1]] = source
+        return x
     
     
     

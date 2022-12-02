@@ -77,7 +77,8 @@ data = data// np.max(np.abs(data))
 # '''
 
 # factorslist = [5, 7, -5, -7, 25, 35, -25, -35, 3,  -3, 59, -59]
-factorslist = [5, 7, 25, 35, 59, 3, 16, 11]
+# factorslist = [5, 7, 25, 35, 59, 3, 16, 11]
+factorslist = [5, 7, 3, 59]
 
 # R8 approx: 0.11805914256198347
 # factorslist = [7, 25]

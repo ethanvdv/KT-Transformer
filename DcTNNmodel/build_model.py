@@ -3,6 +3,8 @@ import numpy as np
 from DcTNN.tnn import * 
 from dc.dc import *
 from DcTNN.KalEncoder import *
+from DcTNN.FractalEncoder import *
+from DcTNN.FractalEncoder2 import *
 # from phantominator import shepp_logan
 from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
@@ -11,13 +13,14 @@ from loadingimages import GetDatasetFolder
 import torch.optim as optim
 from torchmetrics import StructuralSimilarityIndexMeasure
 import os
-print("Updated Encoding")
+print("My Encodings - Fractal - Subtractive")
 randomnumber = np.random.randint(1,1000)
 print(f"Random number to deal with namespace stuff: {randomnumber}")
 print(torch.cuda.is_available)
 norm = 'ortho'
 N = 176
-R = 4
+R = 125
+fractal = True
 numCh = 1
 lamb = True
 device = 'cuda'
@@ -29,9 +32,14 @@ path = os.path.join('/home/Student/s4532907', str(randomnumber))
 
 os.mkdir(path)
 
+
+print(f'Fractal {fractal}')
 # Load a random sampling mask and inverse fourier shift
-# sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/masks/mask_R" + str(R) + ".png")))
-sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/fractalmasks/mask_R" + str(R) + ".png")))
+if fractal:
+    sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/fractalmasks/mask_R" + str(R) + ".png")))
+else:
+    sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/masks/mask_R" + str(R) + ".png")))
+
 sampling_mask = np.fft.ifftshift(sampling_mask) // np.max(np.abs(sampling_mask))
 # sampling_mask = sampling_mask // np.max(np.abs(sampling_mask))
 sampling_mask = torch.tensor(sampling_mask.copy(), dtype=torch.float)
@@ -63,17 +71,23 @@ numCh = numCh
 dim_feedforward = None
 
 
-# # Define the dictionaries of parameter values
+# # # Define the dictionaries of parameter values
 # patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
 # kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
 # axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
 
-kd3Args = {"nu": 5, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-kd2Args = {"nu": 3, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-kd1Args = {"nu": 7, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-kd4Args = {"nu": 25, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-# kd1Args = {"nu": 3, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-# kd2Args = {"nu": 5, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kd3Args = {"nu": 7, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kd2Args = {"nu": 5, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kd1Args = {"nu": 3, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+
+encList = [patchFracVIT, patchFracVIT, patchFracVIT]
+encArgs = [kd1Args, kd2Args, kd3Args]
+
+# encList = [patchFracVIT, patchFracVIT, patchFracVIT]
+# encArgs = [kd1Args, kd2Args, kd3Args]
+
+# encList = [patch3VIT]
+# encArgs = [kdArgs]
 
 # # Define the array of encoders
 # encList = [axVIT, patchVIT, patchVIT]
@@ -81,33 +95,26 @@ kd4Args = {"nu": 25, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5,
 # encArgs = [axArgs, kdArgs, patchArgs]
 
 
-
-
-encList = [patch2VIT, patch2VIT, patch2VIT, patch2VIT]
-encArgs = [kd1Args, kd3Args,kd2Args, kd4Args]
-# # 7 25 5
+print(encList)
 
 # Define the model
 dcenc = cascadeNet(N, encList, encArgs, FFT_DC, lamb)
 dcenc = dcenc.to(device)
 # Count the number of parameters
 pytorch_total_params = sum(p.numel() for p in dcenc.parameters() if p.requires_grad)
-print("Number of trainable params: " + str(pytorch_total_params))
 
-
-lr = 3e-4
+lr = 1e-4
 weighting = 10e-7
-print(f'lr {lr} weighting {weighting}')
+# print(f'lr {lr} weighting {weighting}')
 MAE_loss = torch.nn.L1Loss().to('cuda')
 
 optimizer = optim.Adam(dcenc.parameters(),lr)
-epochs = 100
+epochs = 300
 step = 0
 
 # BASE_PATH = '/home/groups/deep-compute/OASIS/'
 BASE_PATH = '/home/Student/s4532907/'
-BATCH_SIZE = 10
-# batching = 15
+BATCH_SIZE = 15
 offset = 1700
 
 ds = GetDatasetFolder(path=BASE_PATH, val_offset=offset, train=True)
@@ -151,7 +158,6 @@ for epoch in range(epochs):
         running_loss += loss.item()
         if loss.item() < finalrunning_loss:
             finalrunning_loss = loss.item()
-            # print(f'New Best: {finalrunning_loss}')
         loss.backward()
         optimizer.step()
         totaliterstrain += 1
@@ -182,15 +188,16 @@ for epoch in range(epochs):
     
 
     #Print a final reconstruction
-    if (np.mod(epoch,25) == 0) or (epoch == (epochs-1)):
+    if (np.mod(epoch,10) == 0) or (epoch == (epochs-1)):
         plt.imsave(f'{randomnumber}/newensemble-{randomnumber}-{epoch}-recon.png',np.abs(phRecon1[-1, 0, :, :].cpu()))
         if epoch == 0:
             plt.imsave(f'{randomnumber}/newensemble-{randomnumber}-{epoch}-image.png',np.abs(singleimage1[-1, 0, :, :].cpu()))
             plt.imsave(f'{randomnumber}/newensemble-{randomnumber}-{epoch}-zf.png',np.abs(zf_image[-1, 0, :, :].cpu()))
-        # plt.imsave(f'newensemble-{randomnumber}-{epoch}-zfimage.png',np.abs(zf_image[0, 0, :, :].cpu()))
+            # plt.imsave(f'{randomnumber}/newensemble-{randomnumber}-{epoch}-y.png',y[-1, 0, :, :].cpu())
         ssim = StructuralSimilarityIndexMeasure().to('cuda')
         print(f'SSIM at epoch {epoch}:')
-        print(ssim(phRecon1[-2:-1, :, :, :].to('cuda'),singleimage1[-2:-1, :, :, :].to('cuda')))
+        # print(ssim(phRecon1[-2:-1, :, :, :].to('cuda'),singleimage1[-2:-1, :, :, :].to('cuda')))
+        print(ssim(phRecon1[:, :, :, :].to('cuda'),singleimage1[:, :, :, :].to('cuda')))
         
     print("___________________________________")
     print(f"Epoch {epoch} Train loss: {running_loss}")

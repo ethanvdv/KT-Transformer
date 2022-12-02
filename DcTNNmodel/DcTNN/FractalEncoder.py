@@ -17,8 +17,7 @@ def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
 
-
-class patch2VIT(nn.Module):
+class patchFracVIT(nn.Module):
     """
     Defines a TNN that creates either Kaleidoscope or Patch tokens.
     Args:
@@ -37,7 +36,7 @@ class patch2VIT(nn.Module):
     def __init__(self, N, nu=1, sigma=1, layerNo=2, numCh=1, d_model=None, 
                     nhead=8, num_encoder_layers=2, dim_feedforward=None, dropout=0.1, activation='relu', 
                     layer_norm_eps=1e-05, batch_first=True, device=None, dtype=None):
-        super(patch2VIT, self).__init__()
+        super(patchFracVIT, self).__init__()
         # Define the number of iterations to go through the transformer
         self.layerNo = layerNo
         # Define the number of channels (2 means imaginary)
@@ -66,7 +65,7 @@ class patch2VIT(nn.Module):
         # For each layer, cascade an image transformer
         transformers = []
         for _ in range(layerNo):
-            transformers.append(MKTEncoder(self.N, nu, sigma, numCh,
+            transformers.append(fracEncoder(self.N, nu, sigma, numCh,
                                                             d_model, nhead, num_encoder_layers, dim_feedforward,
                                                             dropout, activation, layer_norm_eps, 
                                                             batch_first, device, dtype))
@@ -91,7 +90,7 @@ class patch2VIT(nn.Module):
 
 
 
-class MKTEncoder(nn.Module):
+class fracEncoder(nn.Module):
     """
     Here we initialize a standard Encoder that utilizes image patches or kaleidoscope tokens.
 
@@ -122,14 +121,21 @@ class MKTEncoder(nn.Module):
             self.case = 2
             self.shift = int((image_size + sigma)/nu)
             
-        
-        patch_dim = self.shift * self.shift * numCh
+        print(self.case)
+        patch_dim = int(self.shift) * int(self.shift) * numCh
         
         num_patches = int(self.nu * self.nu)
         
         # print(f'{nu} and {self.shift} , {num_patches}, {d_model}')
+        
+
+        # if nu == 7:
+        #     value = (image_size - sigma)/25
+        # else:
+        #     value = nu
             
-        self.mktindexes = Kaleidoscope.MKTkaleidoscopeIndexes(shift=self.nu, N=image_size)
+
+        self.mktindexes = Kaleidoscope.MKTkaleidoscopeIndexes(shift=nu, N=image_size)
         self.mktindexes.to(device)
         # Define positional embedding
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches, d_model))
@@ -172,10 +178,10 @@ class MKTEncoder(nn.Module):
         # Define dropout layer
         self.dropout = nn.Dropout(dropout)
 
-        N = 176
-        self.changes5 = Kaleidoscope.MKTkaleidoscopeIndexes(5,N)
-        self.changes3 = Kaleidoscope.MKTkaleidoscopeIndexes(3,N)
-        self.changes7 = Kaleidoscope.MKTkaleidoscopeIndexes(7,N)
+        # N = 176
+        # self.changes5 = Kaleidoscope.MKTkaleidoscopeIndexes(5,N)
+        # self.changes3 = Kaleidoscope.MKTkaleidoscopeIndexes(3,N)
+        # self.changes7 = Kaleidoscope.MKTkaleidoscopeIndexes(7,N)
 
 
 
@@ -183,19 +189,27 @@ class MKTEncoder(nn.Module):
     def forward(self, img, src_mask=None):
 
         x = img
-
+        # x1 = img.detach().clone()
+        # print(x.shape)
+        # print('1')
         x.to('cuda')
 
-        out5 = Kaleidoscope.pseudoInvMKTransform(x.clone(), self.changes5)
-        out3 = Kaleidoscope.pseudoInvMKTransform(x.clone(), self.changes3)
-        # out59 = Kaleidoscope.pseudoInvMKTransform(x.detach().clone(), self.changes59)
-        out7 = Kaleidoscope.pseudoInvMKTransform(x.clone(), self.changes7)
-
-        x = (x + (out5 + out3 + out7))
+        # print(x.shape)
+        # out5 = Kaleidoscope.pseudoInvMKTransform(x.clone(), self.changes5)
+        # out3 = Kaleidoscope.pseudoInvMKTransform(x.clone(), self.changes3)
+        # out = torch.add(out5,out3)
+        # # out59 = Kaleidoscope.pseudoInvMKTransform(x.detach().clone(), self.changes59)
+        # out7 = Kaleidoscope.pseudoInvMKTransform(x.clone(), self.changes7)
+        # out = torch.add(out,out7)
+        # print(x.shape)
+        # print(out.shape)
+        # x = torch.subtract(x, out)
 
         x = Kaleidoscope.ApplyMKTransform(x, self.mktindexes)
-        
-        
+        # x = Kaleidoscope.newPseudoKT(x, self.mktindexes)
+        # x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
+        # print('2')
+        # print(x.shape)
         if self.case == 1:
             # Get the patch representation
             # print(x.shape)
@@ -204,11 +218,15 @@ class MKTEncoder(nn.Module):
             x = self.to_patch_embedding(x[:, :, :-1, :-1].to('cuda'))
         
         if self.case == 2:
-            
+            # print('3')
+            # print(x.shape)
             x = torch.cat((x, x[:,:,[-1],:].to('cuda')), 2)
+            # print('4')
+            # print(x.shape)
+
             x = torch.cat((x, x[:,:,:,[-1]].to('cuda')), 3)     
-
-
+            # print('5')
+            # print(x.shape)
             x = self.to_patch_embedding(x)
             
 
@@ -225,8 +243,10 @@ class MKTEncoder(nn.Module):
         if self.case == 1:
             x = self.mlp_head(x)
             x = torch.cat((x, x1[:,:,[-1],:-1].to('cuda')), 2)
-            x = torch.cat((x, x1[:,:,:,[-1]].to('cuda')), 3)   
-
+            x = torch.cat((x, x1[:,:,:,[-1]].to('cuda')), 3)
+            # 
+            # x = torch.cat((x, x[:,:,[-1],:].to('cuda')), 2)
+            # x = torch.cat((x,torch.cat((x[:,:,:,[-1]].to('cuda'), x[:,:,-1,[-1]].to('cuda')), 3).to('cuda')), 3)
         if self.case == 2:
             
             x = self.mlp_head(x)
@@ -234,7 +254,7 @@ class MKTEncoder(nn.Module):
 
         
         # x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
-        x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
+        
         
         # Return the output
         return x
