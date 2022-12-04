@@ -121,7 +121,7 @@ class fracEncoder(nn.Module):
             self.case = 2
             self.shift = int((image_size + sigma)/nu)
             
-        print(self.case)
+        # print(self.case)
         patch_dim = int(self.shift) * int(self.shift) * numCh
         
         num_patches = int(self.nu * self.nu)
@@ -189,44 +189,24 @@ class fracEncoder(nn.Module):
     def forward(self, img, src_mask=None):
 
         x = img
-        # x1 = img.detach().clone()
-        # print(x.shape)
-        # print('1')
+
         x.to('cuda')
 
-        # print(x.shape)
-        # out5 = Kaleidoscope.pseudoInvMKTransform(x.clone(), self.changes5)
-        # out3 = Kaleidoscope.pseudoInvMKTransform(x.clone(), self.changes3)
-        # out = torch.add(out5,out3)
-        # # out59 = Kaleidoscope.pseudoInvMKTransform(x.detach().clone(), self.changes59)
-        # out7 = Kaleidoscope.pseudoInvMKTransform(x.clone(), self.changes7)
-        # out = torch.add(out,out7)
-        # print(x.shape)
-        # print(out.shape)
-        # x = torch.subtract(x, out)
-
         x = Kaleidoscope.ApplyMKTransform(x, self.mktindexes)
-        # x = Kaleidoscope.newPseudoKT(x, self.mktindexes)
         # x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
-        # print('2')
-        # print(x.shape)
         if self.case == 1:
             # Get the patch representation
-            # print(x.shape)
-            # print(x[:, :, :-1, :-1].shape)
+
             x1 = x.clone()
             x = self.to_patch_embedding(x[:, :, :-1, :-1].to('cuda'))
         
         if self.case == 2:
-            # print('3')
-            # print(x.shape)
+
             x = torch.cat((x, x[:,:,[-1],:].to('cuda')), 2)
-            # print('4')
-            # print(x.shape)
+
 
             x = torch.cat((x, x[:,:,:,[-1]].to('cuda')), 3)     
-            # print('5')
-            # print(x.shape)
+
             x = self.to_patch_embedding(x)
             
 
@@ -244,16 +224,13 @@ class fracEncoder(nn.Module):
             x = self.mlp_head(x)
             x = torch.cat((x, x1[:,:,[-1],:-1].to('cuda')), 2)
             x = torch.cat((x, x1[:,:,:,[-1]].to('cuda')), 3)
-            # 
-            # x = torch.cat((x, x[:,:,[-1],:].to('cuda')), 2)
-            # x = torch.cat((x,torch.cat((x[:,:,:,[-1]].to('cuda'), x[:,:,-1,[-1]].to('cuda')), 3).to('cuda')), 3)
         if self.case == 2:
             
             x = self.mlp_head(x)
             x = x[:,:, :-1, :-1].to('cuda')
 
-        
-        # x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
+        # x = Kaleidoscope.ApplyMKTransform(x, self.mktindexes)
+        x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
         
         
         # Return the output

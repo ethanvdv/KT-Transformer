@@ -220,7 +220,7 @@ class imageEncoder(nn.Module):
         # Get the patch dimensionality
         num_patches = (image_height // patch_height) * (image_width // patch_width)
         patch_dim = patch_height * patch_width * numCh
-        print(f'{num_patches} and {patch_dim} , {d_model}')
+        # print(f'{num_patches} and {patch_dim} , {d_model}')
         # Define related kaleidoscope dimensionality
         k1 = image_height // patch_height
         k2 = image_width // patch_width
@@ -264,6 +264,7 @@ class imageEncoder(nn.Module):
         x = img
         # print(x.shape)
         # If kaleidoscope has been defined
+
         if self.kaleidoscope:
             x = self.to_kaleidoscope_embedding(x)
         # print(x.shape)

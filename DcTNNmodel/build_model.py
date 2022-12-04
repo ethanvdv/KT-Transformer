@@ -13,14 +13,14 @@ from loadingimages import GetDatasetFolder
 import torch.optim as optim
 from torchmetrics import StructuralSimilarityIndexMeasure
 import os
-print("My Encodings - Fractal - Subtractive")
+print("My Encodings - KT Gauss - True Ordering")
 randomnumber = np.random.randint(1,1000)
 print(f"Random number to deal with namespace stuff: {randomnumber}")
 print(torch.cuda.is_available)
 norm = 'ortho'
 N = 176
-R = 125
-fractal = True
+R = 44
+fractal = False
 numCh = 1
 lamb = True
 device = 'cuda'
@@ -71,24 +71,28 @@ numCh = numCh
 dim_feedforward = None
 
 
-# # # Define the dictionaries of parameter values
-# patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-# kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-# axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
+# Define the dictionaries of parameter values
+patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
 
-kd3Args = {"nu": 7, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-kd2Args = {"nu": 5, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kd3Args = {"nu": 5, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+kd2Args = {"nu": 7, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 7, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
 kd1Args = {"nu": 3, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-
-encList = [patchFracVIT, patchFracVIT, patchFracVIT]
-encArgs = [kd1Args, kd2Args, kd3Args]
 
 # encList = [patchFracVIT, patchFracVIT, patchFracVIT]
 # encArgs = [kd1Args, kd2Args, kd3Args]
 
-# encList = [patch3VIT]
+encList = [patchFracVIT, patchFracVIT, patchFracVIT]
+encArgs = [kd1Args, kd2Args, kd3Args]
+
+# encList = [patchVIT]
 # encArgs = [kdArgs]
 
+
+# encList = [patchFracVIT, axVIT, patchFracVIT, patchVIT, patchFracVIT]
+# # Define the array of dictionaries
+# encArgs = [kd2Args, axArgs,  kd1Args, patchArgs, kd3Args]
 # # Define the array of encoders
 # encList = [axVIT, patchVIT, patchVIT]
 # # Define the array of dictionaries
@@ -109,7 +113,7 @@ weighting = 10e-7
 MAE_loss = torch.nn.L1Loss().to('cuda')
 
 optimizer = optim.Adam(dcenc.parameters(),lr)
-epochs = 300
+epochs = 100
 step = 0
 
 # BASE_PATH = '/home/groups/deep-compute/OASIS/'

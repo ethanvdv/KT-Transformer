@@ -62,7 +62,7 @@ changes3 = Kaleidoscope.MKTkaleidoscopeIndexes(3,N)
 changes59 = Kaleidoscope.MKTkaleidoscopeIndexes(59,N)
 changes7 = Kaleidoscope.MKTkaleidoscopeIndexes(37,N)
 
-out5 = Kaleidoscope.ApplyMKTransform(ph, changes5)
+out5 = Kaleidoscope.ApplyMKTransform(ph, changes3)
 print(out5.shape)
 
 # out3 = Kaleidoscope.pseudoInvMKTransform(z2, changes3)

@@ -14,20 +14,20 @@ from PIL import Image, ImageOps
 
 N = 176
 data = np.zeros((N,N))
-h, w =data.shape
+# h, w =data.shape
     
-rows = np.arange(h)
-cols = np.arange(w)
-a = 88 -15
-b = 88 +15
-data[a:b, a:b] = 1
+# rows = np.arange(h)
+# cols = np.arange(w)
+# a = 88 -15
+# b = 88 +15
+# data[a:b, a:b] = 1
 
-data[a:b,a] = 0
-data[a, a:b] = 0
-values = np.arange(a,b)
-for i in values:
-    data[i,i] = 0
-    data[i,-i] = 0     
+# data[a:b,a] = 0
+# data[a, a:b] = 0
+# values = np.arange(a,b)
+# for i in values:
+#     data[i,i] = 0
+#     data[i,-i] = 0     
 
 # print(b-a)
 # from PIL import Image, ImageDraw
@@ -48,20 +48,23 @@ x = torch.tensor(data.copy(), dtype=torch.float)
 x = rearrange(x,'h w -> 1 1 h w')
 # N = 176
 # # x = CreatePhantom(N)
-# R = 101
-# sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/fractalmasks/mask_R" + str(R) + ".png")))
-# # plt.figure(1)
-# # plt.imshow(sampling_mask[70:107, 70:107])
-# data = np.zeros((N,N))
+R = 101
+sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/fractalmasks/mask_R" + str(R) + ".png")))
+# plt.figure(1)
+# plt.imshow(sampling_mask[70:107, 70:107])
+data = np.zeros((N,N))
 # data[70:107, 70:107] = sampling_mask[70:107, 70:107]
+data[65:112, 65:112] = sampling_mask[65:112, 65:112]
+# data[data > 100] = 255
+# data[data < 100] = 0
 
-# data = torch.tensor(data.copy(), dtype=torch.float)
-# x = rearrange(data,'h w -> 1 1 h w')
+data = torch.tensor(data.copy(), dtype=torch.float)
+x = rearrange(data,'h w -> 1 1 h w')
 # # x = sampling_mask
-# plt.imsave(f'mask_Rasdfdsf.png', np.abs(x[0,0,:,:]))
+plt.imsave(f'mask_Rasdfdsf.png', np.abs(x[0,0,:,:]))
 # N = 176
 # # shifts = [5, 7, 59, 3]
-shifts = [5, 3, 7, 59]
+shifts = [5, 3, 7, 59, 35, 25]
 
 # # plt.imsave('mask_R12345.png', np.abs(x[0,0,:,:]))
 
@@ -70,6 +73,7 @@ for shift in shifts:
     # x = x + Kaleidoscope.ApplyMKTransform(x, mktindexes)
     x = torch.logical_or(x,Kaleidoscope.ApplyMKTransform(x, mktindexes))
     plt.imsave(f'mask_R{shift}.png', np.abs(x[0,0,:,:]))
+    print(f"After {shift} the percentage is {np.count_nonzero(x[0,0,:,:])}")
 
 # x[x == True] = 255
 # x[x == False] = 0
