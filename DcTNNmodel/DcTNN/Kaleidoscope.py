@@ -81,7 +81,7 @@ class Kaleidoscope:
     def MKTkaleidoscopeIndexes(shift, N):
               
         shifts = ((shift*np.arange(N))%N)
-        shifts = torch.tensor(shifts.copy(), dtype=torch.int64)
+        shifts = torch.tensor(shifts.copy(), dtype=torch.long)
 
         # _, _, _, n_cols = mat.shape
         

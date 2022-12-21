@@ -11,7 +11,7 @@ N = 176
 data = np.zeros((N,N))
 h, w =data.shape
 
-R = 4
+R = 7
 # sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/masks/mask_R" + str(R) + ".png")))
 
 # values = []
@@ -27,7 +27,8 @@ if R == 6:
     value = 7
 if R == 4:
     value = 22
-
+if R == 7:
+    value = 1
 
 indexs =[]
 newmasks = np.zeros((N,N))
@@ -45,7 +46,7 @@ while len(np.unique(indexs)) < value:
 
 
 newmasks[:,88-11:88+11] = 255
-print(np.count_nonzero(newmasks[0,:]))
+print(np.count_nonzero(newmasks[:,:]))
 plt.imsave(f'mask_R{R}.png', newmasks, cmap = 'gray')
 
 # # # #binary image

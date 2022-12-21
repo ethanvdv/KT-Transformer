@@ -8,6 +8,7 @@ import nibabel as nib
 import random
 import math
 from skimage.transform import resize
+import matplotlib.pyplot as plt
 
 # Get data from OASIS Dataset
 
@@ -17,7 +18,8 @@ class GetDatasetFolder(Dataset):
         # Combine pattern with path     
         self.path = path
         # self.base_path = path + 'MPRAGE'
-        self.base_path = path + 'slices_seg_pad'
+        # self.base_path = path + 'slices_seg_pad'
+        self.base_path = path + 'slices_pad'
         
         self.all_samples = os.listdir(self.base_path)
         self.all_samples.sort()
@@ -38,7 +40,7 @@ class GetDatasetFolder(Dataset):
 
         # Load T1 image
         
-        volume_t1, __ = self._load_nii(path=f'{self.path}slices_seg_pad/{scan_id}')
+        volume_t1, __ = self._load_nii(path=f'{self.path}slices_pad/{scan_id}')
         # 
         volume_t1 = (volume_t1 - np.min(volume_t1)) / (np.max(volume_t1) - np.min(volume_t1))
         # volume_t1 = volume_t1[:][104][:]
@@ -91,8 +93,12 @@ class GetDatasetFolder(Dataset):
 
         # Move primary axis to first dimension
         volume = np.moveaxis(volume, primary_axis, 0)
+        plt.imsave(f'mask_Rasdfdsf1.png', np.abs(volume[:,:]))
+        print(volume.shape)
 
-        volume = volume[40:256-40,40:256-40]
+        # volume = volume[40:256-40,40:256-40]
+        # volume = volume[32:256-32,32:256-32]
+        volume = volume[24:256-24,24:256-24]
 
         # volume = volume[70:138,:,:]
         
