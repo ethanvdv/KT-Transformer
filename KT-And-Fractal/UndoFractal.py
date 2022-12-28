@@ -80,9 +80,35 @@ from torchmetrics import StructuralSimilarityIndexMeasure
 recon = np.array(ImageOps.grayscale(Image.open("recon.png")))
 recon = torch.tensor(recon.copy(), dtype=torch.float)
 recon = rearrange(recon, 'h w -> 1 1 h w')
+
+
+# N = 208
+
+# changes3 = Kaleidoscope.MKTkaleidoscopeIndexes(3,N).to('cuda')
+# changes23 = Kaleidoscope.MKTkaleidoscopeIndexes(23,N).to('cuda')
+# changes69 = Kaleidoscope.MKTkaleidoscopeIndexes(69,N).to('cuda')
+# changes11 = Kaleidoscope.MKTkaleidoscopeIndexes(11,N).to('cuda')
+# changes19 = Kaleidoscope.MKTkaleidoscopeIndexes(19,N).to('cuda')
+
+
+# def unFractalise(zf_image):
+#     # zf_image = torch.fft.ifftshift(zf_image)
+#     out3 = Kaleidoscope.pseudoInvMKTransform(zf_image.clone().to('cuda'), changes3).to('cuda')
+#     out23 = Kaleidoscope.pseudoInvMKTransform(zf_image.clone().to('cuda'), changes23).to('cuda')
+#     out69 = Kaleidoscope.pseudoInvMKTransform(zf_image.clone().to('cuda'), changes69).to('cuda')
+#     out11 = Kaleidoscope.pseudoInvMKTransform(zf_image.clone().to('cuda'), changes11).to('cuda')
+#     out19 = Kaleidoscope.pseudoInvMKTransform(zf_image.clone().to('cuda'), changes19).to('cuda')
+#     zf_x = ((out3 + out23 + out69 + out11 + out19)/5).to('cuda')
+#     # zf_x = torch.fft.ifftshift(zf_x)
+#     return zf_x
+
+
 original = np.array(ImageOps.grayscale(Image.open("original.png")))
 original = torch.tensor(original.copy(), dtype=torch.float)
 original = rearrange(original, 'h w -> 1 1 h w')
+
+# output = unFractalise(original)
+# plt.imsave(f'ktt.png', np.abs(output[0,0,:,:].cpu()))
 
 # ph = np.array(ImageOps.grayscale(Image.open("KT-Transformer/KT-And-Fractal/image.png")))
 
@@ -121,5 +147,5 @@ ssim = StructuralSimilarityIndexMeasure()
 estSSim = ssim(recon,original)
 print(estSSim)
 
-plt.imsave(f'ktt.png', np.abs(original[0,0,:,:]))
-plt.imsave(f'ktthin.png', np.abs(recon[0,0,:,:]))
+plt.imsave(f'orig.png', np.abs(original[0,0,:,:]))
+plt.imsave(f'reco.png', np.abs(recon[0,0,:,:]))

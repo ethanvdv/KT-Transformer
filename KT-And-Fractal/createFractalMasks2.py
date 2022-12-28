@@ -5,17 +5,21 @@ from Kaleidoscope import *
 from PIL import Image, ImageOps
 from einops import rearrange
 
-N = 176
-R = 5
-# sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/fractalmasks/mask_R" + str(R) + ".png")))
-sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/KT-And-Fractal/mask_R" + str(R) + ".png")))
+N = 208
+R = 20
+sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/fractalmasks/mask_R" + str(R) + ".png")))
+# sampling_mask = np.array(ImageOps.grayscale(Image.open("mask_R" + str(R) + ".png")))
+# sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/KT-And-Fractal/mask_R" + str(R) + ".png")))
 print(sampling_mask.shape)
-print(f"The percentage is {np.count_nonzero(sampling_mask)}, {np.count_nonzero(sampling_mask)/(176*176)}")
+print(f"The percentage is {np.count_nonzero(sampling_mask)}, {np.count_nonzero(sampling_mask)/(N*N)}")
 # data = np.zeros((N,N))
-print(f"The percentage is {np.count_nonzero(sampling_mask)}, {1/(np.count_nonzero(sampling_mask)/(176*176))}")
+print(f"The percentage is {np.count_nonzero(sampling_mask)}, {1/(np.count_nonzero(sampling_mask)/(N*N))}")
 
-
-
+a = 20
+sampling_mask[:,104-13:104+13] = 255
+# sampling_mask[104-a:104+1+a,104-a:104+1+a] = 255
+plt.imsave(f'mask_R.png', sampling_mask, cmap='gray')
+print(f"After  the percentage is {np.count_nonzero(sampling_mask)}, {np.count_nonzero(sampling_mask)/(N*N)}")
 # values = [0, 1, 172, 87, 86, 2, 171, 58, 115, 3, 170, 116, 57, 88, 85, 130, 43, 4, 169, 44, 129, 59, 114, 104, 69, 5, 168, 173]
 
 # for value in values:

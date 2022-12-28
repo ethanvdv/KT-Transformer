@@ -18,9 +18,9 @@ import wandb
 # print(f"Random number to deal with namespace stuff: {randomnumber}")
 # print(torch.cuda.is_available)
 norm = 'ortho'
-N = 176
+N = 208
 R = 6
-fractal = False
+fractal = True
 original = False
 numCh = 1
 lamb = True
@@ -36,19 +36,22 @@ d_model_patch = None
 num_encoder_layers = 2
 numCh = numCh
 dim_feedforward = None
-lr = 1e-4
-weighting = 10e-7
+lr = 3e-4
+weighting = 20e-7
+# weighting = 5e-7
 MAE_loss = torch.nn.L1Loss().to('cuda')
 
-
+firstepoch = 0
 epochs = 400
 step = 0
 
 BASE_PATH = '/home/groups/deep-compute/OASIS/'
 # /home/groups/deep-compute/OASIS/slices_pad
 # BASE_PATH = '/home/Student/s4532907/'
+# BATCH_SIZE = 30
 BATCH_SIZE = 15
-offset = 1700
+offset = 1100
+# offset = 2200
 
 
 
@@ -64,8 +67,18 @@ Helper Functions
 def undersample(ph):
     # Undersample the image
     y = fft_2d(ph.to('cuda')) * sampling_mask.to('cuda')
-    zf_image = ifft_2d(y, norm=norm)[:, 0:numCh, :, :].to('cuda')
+    
     # y = rearrange(sampling_mask, 'h w -> 1 1 h w')
+    if original == True:
+        y = y
+        zf_image = ifft_2d(y, norm=norm)[:, 0:numCh, :, :].to('cuda')
+        
+    else:
+        # y = unFractalise(y)
+        zf_image = ifft_2d(y, norm=norm)[:, 0:numCh, :, :].to('cuda')
+        zf_image = unFractalise(zf_image)
+        # y = Fractalise(y)
+ 
     return y, zf_image
 
     
@@ -76,32 +89,121 @@ def total_variation_loss(img, weight):
     return weight*(tv_h+tv_w)/(bs_img*c_img*h_img*w_img)
 
 
+def FRAC_DC(x, y, mask, lamb, norm='ortho'):
+    # x = unFractalise(x)
+    # y = unFractalise(y)
+    # Check if complex
+    numCh = x.shape[1]
+
+    # Get complex y view
+    cy = y.permute(0, 2, 3, 1).contiguous()
+    cy = torch.view_as_complex(cy)
+
+    # By default, torch.view_as_complex uses last index as real,imag
+    x = x.permute(0, 2, 3, 1).contiguous()
+
+    # Perform operations depending on the number of dimensions
+    if numCh == 1:
+
+        # Populate imaginary axis with zeros
+        x = torch.cat([x, torch.zeros_like(x)], 3)
+
+    # get k-space of the input image
+    z = torch.fft.fft2(torch.view_as_complex(x), norm=norm).to('cuda')
+
+    y.to('cuda')
+    x.to('cuda')
+    mask.to('cuda')
+    cy.to('cuda')
+
+    # Perform data consistency 
+    if lamb is None:
+        # Replace Fourier measurements
+        z = ((1 - mask.to('cuda')).to('cuda') * z.to('cuda')) + (mask.to('cuda') * cy.to('cuda'))
+    else:
+        # Weighted average of the collected and reconstructed points
+        z = (((1 - mask).to('cuda')).to('cuda') * z.to('cuda')).to('cuda') + mask.to('cuda') * (z.to('cuda') + lamb.to('cuda') * cy.to('cuda')).to('cuda') / (1 + lamb)
+
+    z.to('cuda')
+    # Apply mask and invert (keep channels that we are working with)
+    z = torch.view_as_real(torch.fft.ifft2(z, norm=norm))[:, :, :, 0:numCh].to('cuda')
+    z = z.permute(0, 3, 1, 2)
+    
+    
+
+    # Return masked image
+    return z.to('cuda')
+
+
+# shifts = [3, 23, 69, 11, 19]
+changes3 = Kaleidoscope.MKTkaleidoscopeIndexes(3,N).to('cuda')
+# changes9 = Kaleidoscope.MKTkaleidoscopeIndexes(9,N).to('cuda')
+changes23 = Kaleidoscope.MKTkaleidoscopeIndexes(23,N).to('cuda')
+changes69 = Kaleidoscope.MKTkaleidoscopeIndexes(69,N).to('cuda')
+changes11 = Kaleidoscope.MKTkaleidoscopeIndexes(11,N).to('cuda')
+changes19 = Kaleidoscope.MKTkaleidoscopeIndexes(19,N).to('cuda')
+
+
+def unFractalise(image):
+    # zf_image = rearrange(zf_image, 'h w -> 1 1 h w')
+    image = torch.fft.ifftshift(image)
+    out3 = Kaleidoscope.pseudoInvMKTransform(image.clone().to('cuda'), changes3).to('cuda')
+    # out9 = Kaleidoscope.pseudoInvMKTransform(image.clone().to('cuda'), changes9).to('cuda')
+    out23 = Kaleidoscope.pseudoInvMKTransform(image.clone().to('cuda'), changes23).to('cuda')
+    out69 = Kaleidoscope.pseudoInvMKTransform(image.clone().to('cuda'), changes69).to('cuda')
+    out11 = Kaleidoscope.pseudoInvMKTransform(image.clone().to('cuda'), changes11).to('cuda')
+    out19 = Kaleidoscope.pseudoInvMKTransform(image.clone().to('cuda'), changes19).to('cuda')
+    image = ((out3 + out23 + out69 + out11 + out19)/5).to('cuda')
+    # image = (image + (out3 + out23 + out69 + out11 + out19)/5).to('cuda')
+    # image = out3.to('cuda')
+    # image = torch.fft.ifftshift(image) / torch.max(torch.abs(image))
+    image = torch.fft.ifftshift(image)
+    return image
+
+
+def Fractalise(image):
+    image = torch.fft.ifftshift(image)
+    out3 = Kaleidoscope.ApplyMKTransform(image.clone().to('cuda'), changes3).to('cuda')
+    # out9 = Kaleidoscope.ApplyMKTransform(image.clone().to('cuda'), changes9).to('cuda')
+    out23 = Kaleidoscope.ApplyMKTransform(image.clone().to('cuda'), changes23).to('cuda')
+    out69 = Kaleidoscope.ApplyMKTransform(image.clone().to('cuda'), changes69).to('cuda')
+    out11 = Kaleidoscope.ApplyMKTransform(image.clone().to('cuda'), changes11).to('cuda')
+    out19 = Kaleidoscope.ApplyMKTransform(image.clone().to('cuda'), changes19).to('cuda')
+    image = ((out3 + out23 + out69 + out11 + out19)/5).to('cuda')
+    # image = (image - (out3 + out23 + out69 + out11 + out19)/5).to('cuda')
+    # image = ((out3 + out23 + out69 + out11 + out19 + out9)).to('cuda')
+    # image = ((image + image) - (out3 + out23 + out69 + out11 + out19 + out9)).to('cuda')
+    # image = out3.to('cuda')
+    image = torch.fft.ifftshift(image)
+    return image
 
 
 if original == True:
-    #Marlons Network
+#     #Marlons Network
     patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
     kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
     axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
 
     encList = [axVIT, patchVIT, patchVIT]
     encArgs = [axArgs, kdArgs, patchArgs]
-
 else:
+    # patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    # kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    # axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
+    # encList = [axVIT]
+    # encArgs = [axArgs]
+    # encList = [axVIT, patchVIT, patchVIT]
+    # encArgs = [axArgs, kdArgs, patchArgs]
+    # kd1Args = {"nu": 9, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 23, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    # encList = [patchFracVIT]
+    # encArgs = [kd1Args]
     patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
     kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
     axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
 
-    encList = [axVIT, antipatchVIT, patchVIT]
+    encList = [axVIT, patchVIT, patchVIT]
     encArgs = [axArgs, kdArgs, patchArgs]
-    # kd3Args = {"nu": 5, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    # kd2Args = {"nu": 7, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 25, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    # # kd1Args = {"nu": 3, "sigma": 1, "layerNo": layerNo, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-
-    # # encList = [patchFracVIT, patchFracVIT, patchFracVIT]
-    # # encArgs = [kd2Args, kd3Args, kd1Args]
-    # encList = [patchFracVIT]
-    # encArgs = [kd2Args]
+    
 
 if fractal:
     sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/fractalmasks/mask_R" + str(R) + ".png")))
@@ -117,9 +219,11 @@ sampling_mask = torch.tensor(sampling_mask.copy(), dtype=torch.float)
 sampling_mask.to('cuda')
 
 
-
+if original:
 # Define the model
-dcenc = cascadeNet(N, encList, encArgs, FFT_DC, lamb)
+    dcenc = cascadeNet(N, encList, encArgs, FFT_DC, lamb)
+else:
+    dcenc = cascadeNet(N, encList, encArgs, FRAC_DC, lamb)
 dcenc = dcenc.to(device)
 # Count the number of parameters
 pytorch_total_params = sum(p.numel() for p in dcenc.parameters() if p.requires_grad)
@@ -147,6 +251,7 @@ print(f"Value Offset: {offset}")
 print(f"Lambda {lamb}")
 
 wandb.init(project="Fractal Transformer", config={"Original":original, "Fractal": fractal, "Sampling Pattern": R, "epochs": epochs, "lambda": lamb, "Batch Size": BATCH_SIZE})
+# wandb.run.log_code(".")
 wandb.config.update({"Value Offset": offset, "Enclist": encList, "encArgs": encArgs})
 samplingmask = wandb.Image(np.abs(sm[0,0,:,:]), caption="Sampling Mask")
 wandb.log({'mask': samplingmask})
@@ -185,7 +290,7 @@ for epoch in range(epochs):
         optimizer.step()
         totaliterstrain += 1
         step += 1
-    
+    # print(totaliterstrain)
     
     #Attempt at Testing Dataset
     for batch_idx, X in enumerate(val_dl):
@@ -203,6 +308,9 @@ for epoch in range(epochs):
             loss.to('cuda') 
             if (epoch == 0) and (batch_idx == 0):
                 bestSSim = ssim(phRecon1[0:1, :, :, :].to('cuda'),singleimage1[0:1, :, :, :].to('cuda'))
+                originalimages = wandb.Image(np.abs(singleimage1[0, 0, :, :].cpu()), caption="Original Image")
+                images = wandb.Image(np.abs(phRecon1[0, 0, :, :].cpu()), caption="Image Recon")
+                wandb.log({"Original Image": originalimages, "recon": images})
             
             valuessim = ssim(phRecon1[0:1, :, :, :].to('cuda'),singleimage1[0:1, :, :, :].to('cuda'))
             if valuessim > bestSSim:
@@ -225,7 +333,7 @@ for epoch in range(epochs):
             totalitersval +=1
             wandb.log({'valloss': loss.item(), 'ssim': valuessim}) 
             
-    
+    # print(totaliterstrain)
     if epoch == 0:
         zfimages = wandb.Image(np.abs(zf_image[-1, 0, :, :].cpu()), caption="Zero Fill Image")
         wandb.log({"Zero Fill": zfimages})        

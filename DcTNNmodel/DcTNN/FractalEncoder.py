@@ -241,8 +241,8 @@ class frac2Encoder(nn.Module):
         # else:
         #     value = nu
             
-        self.mktindexes = Kaleidoscope.MKTkaleidoscopeIndexes(shift=self.nu, N=image_size)
-        self.mktindexes.to(device)
+        # self.mktindexes = Kaleidoscope.MKTkaleidoscopeIndexes(shift=self.nu, N=image_size)
+        # self.mktindexes.to(device)
         # Define positional embedding
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches, d_model))
 
@@ -298,7 +298,7 @@ class frac2Encoder(nn.Module):
 
         x.to('cuda')
 
-        x = Kaleidoscope.ApplyMKTransform(x, self.mktindexes)
+        # x = Kaleidoscope.ApplyMKTransform(x, self.mktindexes)
         # x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
         if self.case == 1:
             # Get the patch representation
@@ -336,7 +336,7 @@ class frac2Encoder(nn.Module):
             x = x[:,:, :-1, :-1].to('cuda')
 
         # x = Kaleidoscope.ApplyMKTransform(x, self.mktindexes)
-        x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
+        # x = Kaleidoscope.pseudoInvMKTransform(x, self.mktindexes)
         
         
         # Return the output

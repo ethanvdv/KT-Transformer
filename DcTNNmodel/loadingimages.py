@@ -23,7 +23,7 @@ class GetDatasetFolder(Dataset):
         
         self.all_samples = os.listdir(self.base_path)
         self.all_samples.sort()
-
+        # print(len(self.all_samples))
         if train:
             self.all_samples = self.all_samples[:-val_offset]
         else:
@@ -93,8 +93,8 @@ class GetDatasetFolder(Dataset):
 
         # Move primary axis to first dimension
         volume = np.moveaxis(volume, primary_axis, 0)
-        plt.imsave(f'mask_Rasdfdsf1.png', np.abs(volume[:,:]))
-        print(volume.shape)
+        # plt.imsave(f'mask_Rasdfdsf1.png', np.abs(volume[:,:]))
+        # print(volume.shape)
 
         # volume = volume[40:256-40,40:256-40]
         # volume = volume[32:256-32,32:256-32]

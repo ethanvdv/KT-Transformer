@@ -61,6 +61,13 @@ class Kaleidoscope:
         #could be used to make it "correct"
         
         # nu = np.ceil((N - sigma) / nu1)
+        #Wraps so a 0 transform is actually a "N" transform
+        #Needed if we divide by zero
+        if nu == 0:
+            nu = N
+            
+        if sigma == 0:
+            sigma = N
         
         rows = np.arange(N)
         cols = np.arange(N)
@@ -141,7 +148,7 @@ class Kaleidoscope:
         input= input[:,:,changes[0,0,:,:,0],changes[0,0,:,:,1]]
         return input.to('cuda')
     
-    
+
     # def pseudoInvMKTransform(source, changes):
     #     '''
     #     Scatter is non-deterministic 
