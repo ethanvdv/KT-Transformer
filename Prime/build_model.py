@@ -14,8 +14,8 @@ from torchmetrics import StructuralSimilarityIndexMeasure
 import wandb
 
 norm = 'ortho'
-N = 208
-R = 92
+N = 211
+R = 211
 fractal = True
 original = False
 numCh = 1
@@ -32,7 +32,8 @@ d_model_patch = None
 num_encoder_layers = 2
 numCh = numCh
 dim_feedforward = None
-lr = 1e-4
+# lr = 1e-4
+lr = 5e-4
 weighting = 10e-7
 # weighting = 5e-7
 MAE_loss = torch.nn.L1Loss().to('cuda')
@@ -53,26 +54,8 @@ Helper Functions
 """
 def undersample(ph):
     # Undersample the image
-    
-    
-    # y = rearrange(sampling_mask, 'h w -> 1 1 h w')
-    if original == True:
-        y = fft_2d(ph.to('cuda')) * sampling_mask.to('cuda')
-        y = y
-        zf_image = ifft_2d(y, norm=norm)[:, 0:numCh, :, :].to('cuda')
-        # zf_image = unFractalise(zf_image)
-        
-    else:
-        # ph = unFractalise(ph)
-        y = fft_2d(ph.to('cuda')) * sampling_mask.to('cuda')
-        # y = unFractalise(y)
-        zf_image = ifft_2d(y, norm=norm)[:, 0:numCh, :, :].to('cuda')
-        # zf_image = Fractalise(zf_image)
-        # y = Fractalise(y)
-        # ph = Fractalise(ph)
-        
-        # y = Fractalise(y)
- 
+    y = fft_2d(ph.to('cuda')) * sampling_mask.to('cuda')
+    zf_image = ifft_2d(y, norm=norm)[:, 0:numCh, :, :].to('cuda') 
     return y, zf_image
 
     
@@ -83,70 +66,42 @@ def total_variation_loss(img, weight):
     return weight*(tv_h+tv_w)/(bs_img*c_img*h_img*w_img)
 
 
-
-# # shifts = [3, 23, 69, 11, 19]
-# changes3 = Kaleidoscope.MKTkaleidoscopeIndexes(3,N).to('cuda')
-# changes9 = Kaleidoscope.MKTkaleidoscopeIndexes2(9,N).to('cuda')
-# changes23 = Kaleidoscope.MKTkaleidoscopeIndexes2(23,N).to('cuda')
-# changes69 = Kaleidoscope.MKTkaleidoscopeIndexes(69,N).to('cuda')
-changes11 = Kaleidoscope.MKTkaleidoscopeIndexes2(11,N).to('cuda')
-# changes19 = Kaleidoscope.MKTkaleidoscopeIndexes2(19,N).to('cuda')
-
-
-def unFractalise(image):
-    image = torch.fft.ifftshift(image)
-    out11 = Kaleidoscope.pseudoInvMKTransform(image.clone().to('cuda'), changes11).to('cuda')
-    image = out11
-    image = torch.fft.ifftshift(image)
-    return image
-
-
-def Fractalise(image):
-    image = torch.fft.ifftshift(image)
-    out11 = Kaleidoscope.ApplyMKTransform(image.clone().to('cuda'), changes11).to('cuda')
-    image = out11
-    image = torch.fft.ifftshift(image)
-    return image
-
-
 if original == True:
-    layerNo = 3
-    patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
+    # layerNo = 3
+    # patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    # kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    # axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
 
-    encList = [axVIT, patchVIT, patchVIT]
-    encArgs = [axArgs, kdArgs, patchArgs]
+    # encList = [axVIT, patchVIT, patchVIT]
+    # encArgs = [axArgs, kdArgs, patchArgs]
+    layerNo = 1
+
+    kd15Args = {"nu": 15, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 14, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    kd14Args = {"nu": 14, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 15, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    kd10Args = {"nu": 10, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 21, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+
+    encList = [AntiVIT, AntiVIT, AntiVIT]
+    encArgs = [kd15Args, kd14Args, kd10Args]
+    
 
 else:
-    layerNo = 2
-    kd9Args = {"nu": 9, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 23, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    kd23Args = {"nu": 23, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 9, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    # kd69Args = {"nu": 69, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    kd11Args = {"nu": 11, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 19, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    kd19Args = {"nu": 19, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 11, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
 
-    # encList = [ShuffleVIT, ShuffleVIT, ShuffleVIT, ShuffleVIT]
-    # encArgs = [kd9Args, kd23Args, kd11Args, kd19Args]
+    layerNo = 1
 
-    layerNo = 3
-    patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
-    kd9Args = {"nu": 9, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 23, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    kd15Args = {"nu": 15, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 14, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    kd14Args = {"nu": 14, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 15, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    kd10Args = {"nu": 10, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 21, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
 
-    encList = [axVIT, ShuffleVIT, patchVIT]
-    encArgs = [axArgs, kd9Args, patchArgs]
+    encList = [ShuffleVIT, ShuffleVIT, ShuffleVIT]
+    encArgs = [kd10Args, kd10Args, kd10Args]
     
 
 if fractal:
-    sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/fractalmasks/mask_R" + str(R) + ".png")))
+    sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/Prime/fractalmasks/mask_R" + str(R) + ".png")))
 else:
-    sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/DcTNNmodel/masks/mask_R" + str(R) + ".png")))
+    sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/Prime/masks/mask_R" + str(R) + ".png")))
 
 
-
-# plt.imsave(f'{randomnumber}/samplingmask{randomnumber}.png',np.abs(sampling_mask))
 sm = rearrange(sampling_mask, 'h w -> 1 1 h w')
 sampling_mask = np.fft.ifftshift(sampling_mask) // np.max(np.abs(sampling_mask))
 sampling_mask = torch.tensor(sampling_mask.copy(), dtype=torch.float)
@@ -184,7 +139,7 @@ print(f"Batch Size: {BATCH_SIZE}")
 print(f"Value Offset: {offset}")
 print(f"Lambda {lamb}")
 
-wandb.init(project="Fractal Transformer", config={"Original":original, "Fractal": fractal, "Sampling Pattern": R, "epochs": epochs, "lambda": lamb, "Batch Size": BATCH_SIZE})
+wandb.init(project="Prime Transformer - 2", config={"Original":original, "Fractal": fractal, "Sampling Pattern": R, "epochs": epochs, "lambda": lamb, "Batch Size": BATCH_SIZE})
 # wandb.run.log_code(".")
 wandb.config.update({"Value Offset": offset, "Enclist": encList, "encArgs": encArgs})
 samplingmask = wandb.Image(np.abs(sm[0,0,:,:]), caption="Sampling Mask")
@@ -216,7 +171,7 @@ for epoch in range(epochs):
         loss = (MAE_loss(phRecon.to('cuda'), singleimage.to('cuda')) + total_variation_loss(phRecon.to('cuda'),weighting))
         # loss = MAE_loss(phRecon.to('cuda'), singleimage.to('cuda'))
         running_loss += loss.item()
-        wandb.log({'trainlos': loss.item()}) 
+        wandb.log({'trainlos': loss.item()}, commit=False) 
         if loss.item() < finalrunning_loss:
             finalrunning_loss = loss.item()
             
@@ -244,17 +199,22 @@ for epoch in range(epochs):
                 bestSSim = ssim(phRecon1[0:1, :, :, :].to('cuda'),singleimage1[0:1, :, :, :].to('cuda'))
                 originalimages = wandb.Image(np.abs(singleimage1[0, 0, :, :].cpu()), caption="Original Image")
                 images = wandb.Image(np.abs(phRecon1[0, 0, :, :].cpu()), caption="Image Recon")
-                wandb.log({"Original Image": originalimages, "recon": images})
+                wandb.log({"Original Image": originalimages, "recon": images}, commit=False)
             
             valuessim = ssim(phRecon1[0:1, :, :, :].to('cuda'),singleimage1[0:1, :, :, :].to('cuda'))
-            if valuessim > bestSSim:
-                bestSSim = valuessim
+            if (epoch != 0):
+                if valuessim > bestSSim:
+                    bestSSim = valuessim
+                    originalimages = wandb.Image(np.abs(singleimage1[0, 0, :, :].cpu()), caption="Original Image")
+                    images = wandb.Image(np.abs(phRecon1[0, 0, :, :].cpu()), caption="Image Recon")
+                    print(bestSSim)
+                    wandb.log({'bestssim': bestSSim}, commit=False) 
+                    if epoch > 5:
+                        wandb.log({"Original Image": originalimages, "recon": images}, commit=False)
+            if (np.mod(epoch, 5) == 0):
                 originalimages = wandb.Image(np.abs(singleimage1[0, 0, :, :].cpu()), caption="Original Image")
                 images = wandb.Image(np.abs(phRecon1[0, 0, :, :].cpu()), caption="Image Recon")
-                print(bestSSim)
-                wandb.log({'bestssim': bestSSim}) 
-                if epoch > 5:
-                    wandb.log({"Original Image": originalimages, "recon": images})
+                wandb.log({"Original Image": originalimages, "recon": images}, commit=False)
             
                 
             
@@ -265,12 +225,12 @@ for epoch in range(epochs):
                 print("_________________")
             finalrunning_loss2 = loss.item()
             totalitersval +=1
-            wandb.log({'valloss': loss.item(), 'ssim': valuessim}) 
+            wandb.log({'valloss': loss.item(), 'ssim': valuessim}, commit=False) 
             
     # print(totaliterstrain)
     if epoch == 0:
         zfimages = wandb.Image(np.abs(zf_image[-1, 0, :, :].cpu()), caption="Zero Fill Image")
-        wandb.log({"Zero Fill": zfimages})        
+        wandb.log({"Zero Fill": zfimages}, commit=False)        
         print(ssim(phRecon1[-2:-1, :, :, :].to('cuda'),singleimage1[-2:-1, :, :, :].to('cuda')))
        
     print("___________________________________")
@@ -282,7 +242,7 @@ for epoch in range(epochs):
     end = time.time()
     elapsed = end - start
     print("Execution took " + str(elapsed) + " seconds")
-    wandb.log({'epoch': epoch, "time per epoch": elapsed}) 
+    wandb.log({'epoch': epoch, "time per epoch": elapsed}, commit=True) 
 
     totaltime += elapsed
     print("Total Time (Mins): " + str((1 / 60) * totaltime))

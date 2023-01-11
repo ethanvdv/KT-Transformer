@@ -98,8 +98,8 @@ class GetDatasetFolder(Dataset):
 
         # volume = volume[40:256-40,40:256-40]
         # volume = volume[32:256-32,32:256-32]
-        volume = volume[24:256-24,24:256-24]
-        
+        # volume = volume[24:256-24,24:256-24]
+        volume = volume[25:256-20,25:256-20]
 
         # volume = volume[70:138,:,:]
         
