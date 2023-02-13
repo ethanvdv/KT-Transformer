@@ -14,9 +14,9 @@ from torchmetrics import StructuralSimilarityIndexMeasure
 import wandb
 
 norm = 'ortho'
-N = 211
-R = 211
-fractal = True
+N = 256
+R = 15
+fractal = False
 original = False
 numCh = 1
 lamb = True
@@ -32,8 +32,8 @@ d_model_patch = None
 num_encoder_layers = 2
 numCh = numCh
 dim_feedforward = None
-# lr = 1e-4
-lr = 5e-4
+lr = 1e-4
+# lr = 5e-4
 weighting = 10e-7
 # weighting = 5e-7
 MAE_loss = torch.nn.L1Loss().to('cuda')
@@ -67,33 +67,24 @@ def total_variation_loss(img, weight):
 
 
 if original == True:
-    # layerNo = 3
-    # patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    # kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    # axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
+    layerNo = 2
+    patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
 
-    # encList = [axVIT, patchVIT, patchVIT]
-    # encArgs = [axArgs, kdArgs, patchArgs]
-    layerNo = 1
-
-    kd15Args = {"nu": 15, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 14, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    kd14Args = {"nu": 14, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 15, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    kd10Args = {"nu": 10, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 21, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-
-    encList = [AntiVIT, AntiVIT, AntiVIT]
-    encArgs = [kd15Args, kd14Args, kd10Args]
-    
+    encList = [axVIT, patchVIT, patchVIT]
+    encArgs = [axArgs, kdArgs, patchArgs]
+   
 
 else:
-
-    layerNo = 1
-
-    kd15Args = {"nu": 15, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 14, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    kd14Args = {"nu": 14, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 15, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    kd10Args = {"nu": 10, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 21, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-
-    encList = [ShuffleVIT, ShuffleVIT, ShuffleVIT]
-    encArgs = [kd10Args, kd10Args, kd10Args]
+    layerNo = 2
+    kd15Args = {"nu": 15, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 17, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    kd17Args = {"nu": 17, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 15, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    # kd85Args = {"nu": 85, 'sigma': 1,  "layerNo": 1, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    
+    
+    encList = [AntiVIT, ShuffleVIT, ShuffleVIT]
+    encArgs = [kd15Args, kd15Args, kd15Args]
     
 
 if fractal:
@@ -105,6 +96,7 @@ else:
 sm = rearrange(sampling_mask, 'h w -> 1 1 h w')
 sampling_mask = np.fft.ifftshift(sampling_mask) // np.max(np.abs(sampling_mask))
 sampling_mask = torch.tensor(sampling_mask.copy(), dtype=torch.float)
+# sampling_mask = sampling_mask[1:,1:]
 sampling_mask.to('cuda')
 
 
@@ -139,7 +131,7 @@ print(f"Batch Size: {BATCH_SIZE}")
 print(f"Value Offset: {offset}")
 print(f"Lambda {lamb}")
 
-wandb.init(project="Prime Transformer - 2", config={"Original":original, "Fractal": fractal, "Sampling Pattern": R, "epochs": epochs, "lambda": lamb, "Batch Size": BATCH_SIZE})
+wandb.init(project="Fractal Recon", config={"Original":original, "Fractal": fractal, "Sampling Pattern": R, "epochs": epochs, "lambda": lamb, "Batch Size": BATCH_SIZE})
 # wandb.run.log_code(".")
 wandb.config.update({"Value Offset": offset, "Enclist": encList, "encArgs": encArgs})
 samplingmask = wandb.Image(np.abs(sm[0,0,:,:]), caption="Sampling Mask")
@@ -189,31 +181,28 @@ for epoch in range(epochs):
         singleimage1.to(device)
         y, zf_image = undersample(singleimage1)
         y.to(device), zf_image.to(device) 
+        # singleimage1 = remove_excess(singleimage1).to('cuda')
+        # y = remove_excess(y).to('cuda')
+        # zf_image = remove_excess(zf_image).to('cuda')
+        # sampling2 = remove_excess2(sampling_mask).to('cuda')
         with torch.no_grad():
             phRecon1 = dcenc(zf_image, y, sampling_mask)
             phRecon1.to('cuda')
             loss = (MAE_loss(phRecon1.to('cuda'), singleimage1.to('cuda'))+ total_variation_loss(phRecon1,weighting))
             # loss = MAE_loss(phRecon1.to('cuda'), singleimage1.to('cuda'))
             loss.to('cuda') 
-            if (epoch == 0) and (batch_idx == 0):
+            # if (epoch == 0) and (batch_idx == 0):
+            if (batch_idx == 0):
                 bestSSim = ssim(phRecon1[0:1, :, :, :].to('cuda'),singleimage1[0:1, :, :, :].to('cuda'))
-                originalimages = wandb.Image(np.abs(singleimage1[0, 0, :, :].cpu()), caption="Original Image")
-                images = wandb.Image(np.abs(phRecon1[0, 0, :, :].cpu()), caption="Image Recon")
-                wandb.log({"Original Image": originalimages, "recon": images}, commit=False)
             
             valuessim = ssim(phRecon1[0:1, :, :, :].to('cuda'),singleimage1[0:1, :, :, :].to('cuda'))
-            if (epoch != 0):
-                if valuessim > bestSSim:
-                    bestSSim = valuessim
-                    originalimages = wandb.Image(np.abs(singleimage1[0, 0, :, :].cpu()), caption="Original Image")
-                    images = wandb.Image(np.abs(phRecon1[0, 0, :, :].cpu()), caption="Image Recon")
-                    print(bestSSim)
-                    wandb.log({'bestssim': bestSSim}, commit=False) 
-                    if epoch > 5:
-                        wandb.log({"Original Image": originalimages, "recon": images}, commit=False)
-            if (np.mod(epoch, 5) == 0):
+            # if (epoch != 0):
+            if valuessim > bestSSim:
+                bestSSim = valuessim
                 originalimages = wandb.Image(np.abs(singleimage1[0, 0, :, :].cpu()), caption="Original Image")
                 images = wandb.Image(np.abs(phRecon1[0, 0, :, :].cpu()), caption="Image Recon")
+                print(bestSSim)
+                wandb.log({'bestssim': bestSSim}, commit=False) 
                 wandb.log({"Original Image": originalimages, "recon": images}, commit=False)
             
                 
@@ -225,13 +214,13 @@ for epoch in range(epochs):
                 print("_________________")
             finalrunning_loss2 = loss.item()
             totalitersval +=1
-            wandb.log({'valloss': loss.item(), 'ssim': valuessim}, commit=False) 
+            wandb.log({'valloss': loss.item()}, commit=False) 
             
     # print(totaliterstrain)
     if epoch == 0:
         zfimages = wandb.Image(np.abs(zf_image[-1, 0, :, :].cpu()), caption="Zero Fill Image")
         wandb.log({"Zero Fill": zfimages}, commit=False)        
-        print(ssim(phRecon1[-2:-1, :, :, :].to('cuda'),singleimage1[-2:-1, :, :, :].to('cuda')))
+        # print(ssim(phRecon1[-2:-1, :, :, :].to('cuda'),singleimage1[-2:-1, :, :, :].to('cuda')))
        
     print("___________________________________")
     print(f"Epoch {epoch} Train loss: {running_loss}")

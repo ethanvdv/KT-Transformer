@@ -62,6 +62,7 @@ class ShuffleVIT(nn.Module):
         # Determine dim_feedforward if not given
         if dim_feedforward is None:
             dim_feedforward = int(d_model ** (3/2))
+        
         # For each layer, cascade an image transformer
         transformers = []
         for _ in range(layerNo):
@@ -123,7 +124,7 @@ class ShuffleEncoder(nn.Module):
         patch_dim = int(self.shift) * int(self.shift) * numCh
         
         num_patches = int(self.nu * self.nu)
-        
+        print(f"{d_model} and {dim_feedforward}, {patch_dim}")
         #Define the Indexes of the Shuffle
         self.mktindexes = Kaleidoscope.MKTkaleidoscopeIndexes(nu,image_size, case=self.case)
 
@@ -415,7 +416,7 @@ class AntiEncoder(nn.Module):
             x = self.mlp_head(x)
             x = x[:,:, :-1, :-1].to('cuda')
 
-        
+        # x = Kaleidoscope.ApplyMKTransform(x, self.mktindexes)
         
         
         # Return the output
