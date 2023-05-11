@@ -38,20 +38,20 @@ class Kaleidoscope:
         rows = torch.arange(N)
 
         # Make indexes
-        m1 = torch.remainder(kal_round(N / nu, sigma) * torch.remainder(rows, nu) + sigma * (rows // nu), N)
-
+        m1 = torch.remainder(kal_round(N / nu, sigma) * torch.remainder(rows, nu) + sigma * (torch.div(rows, nu, rounding_mode='floor')), N)
+        
         arange1 = repeat(m1,'h -> h c', c = N)
         arange1 = rearrange(arange1, 'h w-> 1 1 h w 1')
         arange2 = rearrange(arange1, '1 1 h w 1 -> 1 1 w h 1')
         zerosvector = torch.zeros_like(arange1)
         output = torch.cat((arange1, arange2), 4)
         indexes = torch.cat((output, zerosvector), 4)
-        return indexes
+        return indexes.to('cuda')
     
     
     def ApplyKTTransform(input,changes):
         input= input[:,:,changes[0,0,:,:,0],changes[0,0,:,:,1]]
-        return input
+        return input.to('cuda')
     
     def pseudoInvMKTransform(source, changes):
         x = torch.zeros_like(source)

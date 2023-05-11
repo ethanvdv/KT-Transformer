@@ -29,7 +29,7 @@ class GetDatasetFolder(Dataset):
         else:
             self.all_samples = self.all_samples[len(self.all_samples)-val_offset:]
         # self.all_samples = self.all_samples[:-val_offset]
-        random.shuffle(self.all_samples)
+        # random.shuffle(self.all_samples)
 
     def __len__(self):
         return len(self.all_samples)
@@ -102,5 +102,6 @@ class GetDatasetFolder(Dataset):
         # volume = volume[25:256-20,25:256-20]
 
         # volume = volume[70:138,:,:]
+        volume = volume[18:-16+2,18:-16+2]
         
         return volume, affine

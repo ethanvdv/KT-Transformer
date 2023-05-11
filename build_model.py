@@ -14,7 +14,7 @@ from torchmetrics import StructuralSimilarityIndexMeasure
 import wandb
 
 norm = 'ortho'
-N = 256
+N = 224
 R = 6
 fractal = False
 original = False
@@ -33,13 +33,12 @@ num_encoder_layers = 2
 numCh = numCh
 dim_feedforward = None
 lr = 1e-4
-# lr = 5e-4
+# lr = 0.01
 weighting = 10e-7
-# weighting = 5e-7
 MAE_loss = torch.nn.L1Loss().to('cuda')
 
 firstepoch = 0
-epochs = 400
+epochs = 200
 step = 0
 
 BASE_PATH = '/home/groups/deep-compute/OASIS/'
@@ -76,31 +75,45 @@ if original == True:
     encArgs = [axArgs, kdArgs, patchArgs]
    
 
+
 else:
     layerNo = 2
-    kd15Args = {"nu": 15, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 17, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    # kd17Args = {"nu": 17, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 15, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    # kd85Args = {"nu": 85, 'sigma': 1,  "layerNo": 1, "numCh": numCh, "nhead": 3, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
     patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    # layerNo = 2
-    
-    kd16Args = {"nu": 16, 'sigma': -1,  "layerNo": layerNo, "numCh": numCh, "nhead": 8, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    # kd1Args = {"nu": 16, 'sigma': -3,  "layerNo": layerNo, "numCh": numCh, "nhead": 8, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    
     kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
-    
+    axArgs = {"nu":8, "sigma":165,"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
 
-    encList = [axVIT, InvKTVIT, ShuffleVIT]
-    encArgs = [axArgs, kd16Args, kd15Args]
-    # encList = [axVIT, InvKTVIT, KTVIT]
-    # encArgs = [axArgs, kd16Args, kd1Args]
-    # encList = [KTVIT, InvKTVIT, KTVIT]
-    # encArgs = [kd16Args, kd16Args, kd16Args]
+    encList = [InvaxVIT, patchVIT, patchVIT]
+    encArgs = [axArgs, kdArgs, patchArgs]
+   
+# else:
+#     layerNo = 2
+#     patchArgs = {"patch_size": patchSize, "kaleidoscope": False, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+#     axArgs = {"layerNo": layerNo, "numCh": numCh, "d_model": d_model_axial, "nhead": nhead_axial, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward}
+#     kd15Args = {"nu": 15, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 15, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+#     kd25Args = {"nu": 9, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 5, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+#     kd45Args = {"nu": 25, 'sigma': 1,  "layerNo": layerNo, "numCh": numCh, "nhead": 9, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    
+#     # kd16Args = {"nu": 16, 'sigma': -1,  "layerNo": layerNo, "numCh": numCh, "nhead": 8, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+#     # kd1Args = {"nu": 16, 'sigma': -3,  "layerNo": layerNo, "numCh": numCh, "nhead": 8, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    
+#     # kdArgs = {"patch_size": patchSize, "kaleidoscope": True, "layerNo": layerNo, "numCh": numCh, "nhead": nhead_patch, "num_encoder_layers": num_encoder_layers, "dim_feedforward": dim_feedforward, "d_model": d_model_patch}
+    
+#     # encList = [axVIT, ShuffleVIT, patchVIT]
+#     # encArgs = [axArgs, kd25Args, patchArgs]
+    
+#     # encList = [axVIT, InvKTVIT, ShuffleVIT]
+#     # encArgs = [axArgs, kd16Args, kd15Args]
+#     # encList = [axVIT, InvKTVIT, KTVIT]
+#     # encArgs = [axArgs, kd16Args, kd1Args]
+#     encList = [ShuffleVIT, ShuffleVIT, ShuffleVIT]
+#     encArgs = [kd15Args, kd25Args, kd45Args]
     
 
 if fractal:
+    # sampling_mask = np.zeros((N,N))
     sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/fractalmasks/mask_R" + str(R) + ".png")))
+    # sampling_mask[1:,1:] = np.array(ImageOps.grayscale(Image.open("KT-Transformer/fractalmasks/mask_R" + str(R) + ".png")))
+    # sampling_mask[1:,1:] = np.array(ImageOps.grayscale(Image.open("mask_R" + str(R) + ".png")))
 else:
     sampling_mask = np.array(ImageOps.grayscale(Image.open("KT-Transformer/masks/mask_R" + str(R) + ".png")))
 
@@ -108,20 +121,20 @@ else:
 sm = rearrange(sampling_mask, 'h w -> 1 1 h w')
 sampling_mask = np.fft.ifftshift(sampling_mask) // np.max(np.abs(sampling_mask))
 sampling_mask = torch.tensor(sampling_mask.copy(), dtype=torch.float)
-# sampling_mask = sampling_mask[1:,1:]
 sampling_mask.to('cuda')
 
 
-if original:
+
 # Define the model
-    dcenc = cascadeNet(N, encList, encArgs, FFT_DC, lamb)
-else:
-    dcenc = cascadeNet(N, encList, encArgs, FFT_DC, lamb)
+dcenc = cascadeNet(N, encList, encArgs, FFT_DC, lamb)
+
 dcenc = dcenc.to(device)
+
 # Count the number of parameters
 pytorch_total_params = sum(p.numel() for p in dcenc.parameters() if p.requires_grad)
 
 optimizer = optim.Adam(dcenc.parameters(),lr)
+# optimizer = optim.SGD(dcenc.parameters(),lr)
 
 ds = GetDatasetFolder(path=BASE_PATH, val_offset=offset, train=True)
 dl = DataLoader(ds, batch_size=BATCH_SIZE, num_workers=1)
@@ -133,8 +146,7 @@ val_dl = DataLoader(val_ds, batch_size=BATCH_SIZE, num_workers=1)
 ssim = StructuralSimilarityIndexMeasure().to('cuda')
 
 
-
-wandb.init(project="Kaleidoscope Shuffle", config={"Original":original, "Fractal": fractal, "Sampling Pattern": R, "epochs": epochs, "lambda": lamb, "Batch Size": BATCH_SIZE})
+wandb.init(project="KS-Fractal", config={"Original":original, "Fractal": fractal, "Sampling Pattern": R, "epochs": epochs, "lambda": lamb, "Batch Size": BATCH_SIZE, 'params': pytorch_total_params, 'lr':lr, 'opti': optimizer})
 wandb.config.update({"Value Offset": offset, "Enclist": encList, "encArgs": encArgs})
 samplingmask = wandb.Image(np.abs(sm[0,0,:,:]), caption="Sampling Mask")
 wandb.log({'mask': samplingmask})
@@ -247,6 +259,9 @@ for epoch in range(epochs):
     print("___________________________________")
     print("___________________________________")
     print("___________________________________")
+
+torch.save(dcenc.state_dict(), f'KT-Transformer/models/model{R}-11232.pth')
+
 
 print(f"Total training iterations {totaliterstrain}")
 print(f"Total validation iterations {totalitersval}")

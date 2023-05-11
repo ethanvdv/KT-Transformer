@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageOps
 import random
 
-N = 256
-r8 = 0
+N = 224
+r8 = 14
 print(r8)
-R = 4
+R = 6
 
 if R == 8:
     value = N//8
@@ -27,14 +27,16 @@ while len(np.unique(indexs)) < value:
 
     if (temp > 0) and (temp < N):
         if (temp not in indexs):
-            indexs.append(temp)
-            newmasks[:,temp] = 255
+            if (temp > N//2 + r8//2) or (temp < N//2 - r8//2):
+                indexs.append(temp)
+                newmasks[:,temp] = 255
 print(f'Number of Lines = {len(indexs)}')
 
-# newmasks[:,N//2 - r8//2:N//2 + r8//2] = 255 # add middle 8th
+newmasks[:,N//2 - r8//2:N//2 + r8//2] = 255 # add middle 8th
 # print(np.count_nonzero(newmasks[:,:]))
-plt.imsave(f'mask_R{R}.png', newmasks, cmap = 'gray')
+plt.imsave(f'mask_Ra{R}.png', newmasks, cmap = 'gray')
 print(f"The percentage is {np.count_nonzero(newmasks)}, {(np.count_nonzero(newmasks)/(N*N))}")
+print(f"The percentage is {np.count_nonzero(newmasks)/224}, {(np.count_nonzero(newmasks)/(N*N))}")
 
 
 # N = 256
