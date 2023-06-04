@@ -5,11 +5,12 @@ from Kaleidoscope import Kaleidoscope
 from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
-from loadingim import GetDatasetFolder
+from loadingimages import GetDatasetFolder
 import torch
 from einops import rearrange
 
-import numpy as np
+
+
 
 def kal_round(x, sigma):
     '''
@@ -28,7 +29,7 @@ def kaleidoscope(img, nu, sigma):
     # img = img // np.abs(sigma) # Normalise image
 
     # Initialise new image
-    imgNew = np.zeros_like(img, dtype = int)
+    imgNew = torch.zeros_like(img, dtype=int)
 
     # Perform kaleidoscope transform
     _, h, w = img.shape
@@ -43,7 +44,6 @@ def kaleidoscope(img, nu, sigma):
                         sigma * (r // nu), h)
             m2 = np.mod(kal_round(w / nu, sigma) * np.mod(c, nu) + 
                         sigma * (c // nu), w)
-
             imgNew[:,m1, m2] = img[:,r, c]
 
     return imgNew
@@ -65,8 +65,8 @@ N = 256
 totaltime = 0
 start = time.time()
 
-mktindexes = Kaleidoscope.KalIndexes(nu=16,sigma=1, N=N)
-
+# mktindexes, check1 = Kaleidoscope.KalIndexes(nu=16,sigma=1, N=N)
+# 
 # Save the indicies
 # plt.imsave(f'kt.png', np.abs(mktindexes[0,0,:,:,:].cpu().numpy().astype(np.uint8)))
 
@@ -74,6 +74,7 @@ totalimages = 0
 for batch_index, ph in enumerate(dl):
     ph = rearrange(ph, 'b h w -> b 1 h w').contiguous()
     ph.to(device)
+    mktindexes, check1 = Kaleidoscope.KalIndexes(nu=16,sigma=1, N=N)
     x = Kaleidoscope.ApplyKTTransform(ph, mktindexes)
     totalimages += x.shape[0]
     
@@ -100,6 +101,7 @@ for batch_index, ph in enumerate(dl):
     # if batch_index != 0:
     #     break
     ph.to(device)
+    # print(type(ph))
     ph = kaleidoscope(ph,16,1)
     # ph = rearrange(ph, 'b h w -> b 1 h w').contiguous()
     

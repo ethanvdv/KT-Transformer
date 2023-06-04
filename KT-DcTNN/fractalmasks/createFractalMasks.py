@@ -42,7 +42,7 @@ x = rearrange(x,'h w -> 1 1 h w')
 plt.imsave(f'mask_Rasdfdsf1.png', np.abs(x[0,0,:,:]))
 print(f"the percentage is {np.count_nonzero(x[0,0,:,:])}, {np.count_nonzero(x[0,0,:,:])/(N*N)}")
 
-shifts = [3, 5, 15, 17, 51, 85]
+shifts = [3, 5, 15, 17, 51, 85]z
 count = 0
 for shift in shifts:
     # if shift == 0:

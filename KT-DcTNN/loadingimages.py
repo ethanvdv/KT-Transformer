@@ -102,6 +102,6 @@ class GetDatasetFolder(Dataset):
         # volume = volume[25:256-20,25:256-20]
 
         # volume = volume[70:138,:,:]
-        # volume = volume[18:-16+2,18:-16+2]
-        volume = volume[:225,:225]
+        volume = volume[18:-16+2,18:-16+2]
+        
         return volume, affine
