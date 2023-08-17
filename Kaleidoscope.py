@@ -86,3 +86,35 @@ class Kaleidoscope:
         return torch.unique(m1).shape[0], torch.unique(m2).shape[0]
     
     
+    def AffineKSIndexes(N,nu,sigma,F,G,i,j):
+
+        #Apply Dilation Factors
+        rows = ((F*torch.arange(N)))
+        cols = ((G*torch.arange(N)))
+        
+        # Apply Kaleidoscope Mapping
+        m1 = torch.remainder(kal_round(N / nu, sigma) * torch.remainder(rows, nu) + sigma * (torch.div(rows, nu, rounding_mode='floor')), N)
+        m2 = torch.remainder(kal_round(N / nu, sigma) * torch.remainder(cols, nu) + sigma * (torch.div(cols, nu, rounding_mode='floor')), N)
+
+        # Make Index Tensors
+        arange1 = repeat(m1,'h -> h c', c = N)
+        rollrange = torch.zeros_like(arange1)
+
+        #Apply 'affine' transforms
+        for row in range(arange1.shape[0]):
+            rollrange[:,row] = torch.roll(arange1[:,row],(row * i) % N)
+        arange1 = rearrange(rollrange, 'h w-> 1 1 h w 1')
+
+        arange2 = repeat(m2,'h -> h c', c = N)
+        rollrange2 = torch.zeros_like(arange2)
+
+        #Apply 'affine' transforms
+        for row in np.arange(arange2.shape[0]):
+            rollrange2[:,row] = torch.roll(arange2[:,row],(row * j) % N)
+        arange2 = rearrange(rollrange2, 'h w-> 1 1 w h 1')
+
+        zerosvector = torch.zeros_like(arange1)
+        output = torch.cat((arange1, arange2), 4)
+        indexes = torch.cat((output, zerosvector), 4)
+        return indexes
+    

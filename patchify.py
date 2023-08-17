@@ -124,14 +124,14 @@ Factors Pairs of 224:
 
 """
 
-N = 225
+N = 256
 ph = CreatePhantom(N).to('cpu')
 
-nu = 13
-sigma = -4
+nu = 16
+sigma = 1
 
-f = 86
-g = 124
+f = 1
+g = 1
 # if sigma == 1:
 print(f"For a {(nu,sigma,f,g)} Transform") 
 print(f"There will be {int((nu**2) /(f * g))} KS Tokens with size:")
